@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🌟 Life Dashboard</h1>
+      <button id="toggle-low-mode" class="btn btn-outline">
+        <span id="low-mode-icon">🌙</span> <span id="low-mode-text">Low Mode</span>
+      </button>
+    </header>
+
+    <div id="dashboard-content" class="dashboard-grid">
+      
+      <!-- Daily State -->
+      <section class="card daily-state" id="section-daily">
+        <h2>How are you feeling today?</h2>
+        <div class="sliders">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Mood</span>
+              <span class="badge" id="val-mood">Medium (3/5)</span>
+            </div>
+            <input type="range" id="input-mood" min="1" max="5" value="3">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Energy</span>
+              <span class="badge" id="val-energy">Medium (3/5)</span>
+            </div>
+            <input type="range" id="input-energy" min="1" max="5" value="3">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Stress</span>
+              <span class="badge" id="val-stress">Medium (3/5)</span>
+            </div>
+            <input type="range" id="input-stress" min="1" max="5" value="3">
+          </div>
+        </div>
+      </section>
+
+      <!-- Tasks -->
+      <section class="card tasks" id="section-tasks">
+        <h2>📋 Tasks</h2>
+        
+        <div id="suggested-task-container" class="suggested-task hidden">
+          <div class="suggested-info">
+            <span class="suggested-label">⚡ Suggested (Matches Energy)</span>
+            <p id="suggested-task-title" class="task-title"></p>
+          </div>
+          <button id="btn-complete-suggested" class="icon-btn">✅</button>
+        </div>
+
+        <form id="task-form" class="task-form">
+          <input type="text" id="task-input" placeholder="What needs to be done?" required>
+          <select id="task-energy">
+            <option value="low">Low Energy</option>
+            <option value="medium" selected>Med Energy</option>
+            <option value="high">High Energy</option>
+          </select>
+          <select id="task-importance">
+            <option value="high" selected>High Priority</option>
+            <option value="low">Low Priority</option>
+          </select>
+          <button type="submit" class="btn btn-primary">➕</button>
+        </form>
+
+        <div id="task-list" class="task-list"></div>
+      </section>
+
+      <!-- Thought Dump -->
+      <section class="card thoughts" id="section-thoughts">
+        <h2>💬 Thought Dump</h2>
+        <div class="thought-input-wrapper">
+          <textarea id="thought-input" placeholder="What's on your mind? Just write it out..."></textarea>
+          <button id="btn-save-thought" class="btn btn-primary btn-save">Save</button>
+        </div>
+        <div id="thought-list" class="thought-list"></div>
+      </section>
+
+      <!-- Weekly Insights -->
+      <section class="card insights" id="section-insights">
+        <h2>📈 Insights</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-label">Avg Mood</span>
+            <span id="stat-avg-mood" class="stat-value">-</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Avg Energy</span>
+            <span id="stat-avg-energy" class="stat-value">-</span>
+          </div>
+        </div>
+        <div class="insight-message" id="insight-message">Log your state for a few days to see insights!</div>
+      </section>
+
+      <!-- Decision Helper -->
+      <section class="card decisions" id="section-decisions">
+        <h2>❓ Decision Helper</h2>
+        <form id="decision-form" class="decision-form">
+          <input type="text" id="decision-input" placeholder="What are you deciding on?" required>
+          
+          <div class="slider-group">
+            <div class="slider-header"><span>Importance</span><span id="val-dec-imp" class="bold">3/5</span></div>
+            <input type="range" id="input-dec-imp" min="1" max="5" value="3">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header"><span>Effort required</span><span id="val-dec-eff" class="bold">3/5</span></div>
+            <input type="range" id="input-dec-eff" min="1" max="5" value="3" class="range-orange">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header"><span>Long-term Impact</span><span id="val-dec-impct" class="bold">3/5</span></div>
+            <input type="range" id="input-dec-impct" min="1" max="5" value="3" class="range-green">
+          </div>
+
+          <button type="submit" class="btn btn-primary full-width" style="margin-top: 0.5rem;">Evaluate Option</button>
+        </form>
+
+        <div id="decision-list-container" class="hidden">
+          <div class="decision-header">
+            <span class="decision-label">Recommendations</span>
+            <button id="btn-clear-decisions" class="btn-clear">Clear all</button>
+          </div>
+          <div id="decision-list" class="decision-list"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
