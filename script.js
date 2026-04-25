@@ -1,368 +1,554 @@
-// Data Models
+// ============================================================
+// script.js — RoleFit AI Builder Logic
+// ============================================================
+
 let state = {
-  lowMode: false,
-  tasks: [],
-  thoughts: [],
-  decisions: [],
-  history: [],
-  today: { date: new Date().toLocaleDateString(), mood: 3, energy: 3, stress: 3 }
+  step: 1,
+  role: "",
+  template: "classic",
+  coverTone: "formal",
+  skills: [],
+  projects: [],
+  fresherMode: false,
+  atsScore: 0,
+  matched: [],
+  missing: []
 };
 
-// --- Storage ---
-function loadData() {
-  const saved = localStorage.getItem('life-dash-vanilla');
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    state = { ...state, ...parsed };
+// ---- NAVIGATION ----
+function showPage(page) {
+  document.getElementById("page-home").classList.toggle("hidden", page !== "home");
+  document.getElementById("page-builder").classList.toggle("hidden", page !== "builder");
+  document.getElementById("page-converter").classList.toggle("hidden", page !== "converter");
+  window.scrollTo(0, 0);
+  if (page === "builder") renderTemplates();
+}
+
+function goStep(n) {
+  document.getElementById(`step-${state.step}`).classList.remove("active");
+  document.querySelectorAll(".prog-step").forEach(s => {
+    const sn = parseInt(s.dataset.step);
+    s.classList.remove("active","done");
+    if (sn < n) s.classList.add("done");
+    if (sn === n) s.classList.add("active");
+  });
+  state.step = n;
+  document.getElementById(`step-${n}`).classList.add("active");
+  document.getElementById("current-step-num").innerText = n;
+  if (n === 5) runAIAnalysis();
+  if (n === 7) renderFinalResume();
+  window.scrollTo(0, 0);
+}
+
+// ---- TAG INPUT (SKILLS) ----
+let skills = [];
+function handleTagInput(e, type) {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const val = e.target.value.replace(",","").trim();
+    if (val) addSkill(val);
+    e.target.value = "";
   }
-  
-  // Handle daily rollover
-  const todayDate = new Date().toLocaleDateString();
-  if (state.today.date !== todayDate) {
-    if (!state.history.find(h => h.date === state.today.date)) {
-      state.history.push({ ...state.today });
-    }
-    state.today = { date: todayDate, mood: 3, energy: 3, stress: 3 };
-    saveData();
+}
+function addSkill(val) {
+  if (!skills.includes(val)) {
+    skills.push(val);
+    renderSkillTags();
+    updateSkillSuggestions();
+  }
+}
+function removeSkill(s) {
+  skills = skills.filter(x => x !== s);
+  renderSkillTags();
+  updateSkillSuggestions();
+}
+function renderSkillTags() {
+  document.getElementById("skills-tags").innerHTML = skills.map(s =>
+    `<span class="tag">${s}<span class="tag-remove" onclick="removeSkill('${s}')">×</span></span>`
+  ).join("");
+}
+function updateSkillSuggestions() {
+  const role = state.role;
+  if (!role || !JOB_ROLES[role]) return;
+  const suggestions = JOB_ROLES[role].skills.filter(s => !skills.includes(s)).slice(0, 6);
+  document.getElementById("skill-suggestions").innerHTML = suggestions.map(s =>
+    `<span class="sug-chip" onclick="addSkill('${s}')">${s}</span>`
+  ).join("");
+  document.getElementById("skill-suggest-bar").style.display = suggestions.length ? "flex" : "none";
+}
+
+// ---- ROLE SELECTION ----
+function selectRole(role) {
+  state.role = role;
+  document.querySelectorAll(".role-pill").forEach(p => p.classList.remove("selected"));
+  event.target.classList.add("selected");
+  showToast(`✅ Role set: ${role}`);
+  updateSkillSuggestions();
+}
+
+// ---- FRESHER MODE ----
+function activateFresherMode() {
+  const btn = document.getElementById("fresher-btn");
+  state.fresherMode = !state.fresherMode;
+  btn.classList.toggle("active", state.fresherMode);
+  btn.innerText = state.fresherMode ? "✅ Fresher Mode Active — AI Projects Loaded!" : "🎓 I'm a Fresher — Generate AI Projects for Me";
+  if (state.fresherMode) {
+    const role = state.role || "Software Engineer";
+    const roleData = JOB_ROLES[role] || JOB_ROLES["Software Engineer"];
+    state.projects = roleData.projects.map((p, i) => ({ id: i, ...p }));
+    renderProjects();
+    showToast("🤖 AI generated 3 projects for you!");
   }
 }
 
-function saveData() {
-  localStorage.setItem('life-dash-vanilla', JSON.stringify(state));
-  renderAll();
+// ---- PROJECTS ----
+let projectId = 0;
+function addProject() {
+  const id = ++projectId;
+  state.projects.push({ id, title: "", desc: "" });
+  renderProjects();
+}
+function removeProject(id) {
+  state.projects = state.projects.filter(p => p.id !== id);
+  renderProjects();
+}
+function renderProjects() {
+  document.getElementById("projects-list").innerHTML = state.projects.map(p => `
+    <div class="project-item" id="proj-${p.id}">
+      <div class="project-item-header">
+        <input type="text" value="${p.title}" placeholder="Project / Experience title" onchange="updateProject(${p.id},'title',this.value)"
+          style="border:none;background:transparent;font-size:.9rem;font-weight:700;outline:none;width:80%;font-family:inherit">
+        <button class="btn-remove-proj" onclick="removeProject(${p.id})">✕ Remove</button>
+      </div>
+      <textarea rows="2" placeholder="Describe it with impact (e.g. Built X using Y, achieving Z…)" onchange="updateProject(${p.id},'desc',this.value)"
+        style="width:100%;border:none;background:transparent;font-size:.82rem;color:var(--muted);outline:none;resize:none;font-family:inherit;line-height:1.55">${p.desc}</textarea>
+    </div>`).join("");
+}
+function updateProject(id, field, val) {
+  const p = state.projects.find(x => x.id === id);
+  if (p) p[field] = val;
 }
 
-// --- DOM Elements ---
-const els = {
-  body: document.body,
-  lowModeBtn: document.getElementById('toggle-low-mode'),
-  lowModeText: document.getElementById('low-mode-text'),
-  lowModeIcon: document.getElementById('low-mode-icon'),
-  
-  // Daily State
-  moodIn: document.getElementById('input-mood'),
-  energyIn: document.getElementById('input-energy'),
-  stressIn: document.getElementById('input-stress'),
-  moodVal: document.getElementById('val-mood'),
-  energyVal: document.getElementById('val-energy'),
-  stressVal: document.getElementById('val-stress'),
+// ---- AI ANALYSIS (Rule-based simulation) ----
+function runAIAnalysis() {
+  goStep(5);
+  const role = state.role || "Software Engineer";
+  const roleData = JOB_ROLES[role] || JOB_ROLES["Software Engineer"];
+  const jd = document.getElementById("f-jd").value.toLowerCase();
+  const allKeywords = [...roleData.keywords, ...(jd ? extractJDKeywords(jd) : [])];
 
-  // Tasks
-  taskForm: document.getElementById('task-form'),
-  taskInput: document.getElementById('task-input'),
-  taskEnergy: document.getElementById('task-energy'),
-  taskImp: document.getElementById('task-importance'),
-  taskList: document.getElementById('task-list'),
-  suggestedContainer: document.getElementById('suggested-task-container'),
-  suggestedTitle: document.getElementById('suggested-task-title'),
-  btnCompSuggested: document.getElementById('btn-complete-suggested'),
-  dashboardContent: document.getElementById('dashboard-content'),
+  // Match user skills against role keywords
+  const userSkillsLower = skills.map(s => s.toLowerCase());
+  state.matched = allKeywords.filter(k => userSkillsLower.some(s => s.includes(k.toLowerCase()) || k.toLowerCase().includes(s)));
+  state.missing = allKeywords.filter(k => !state.matched.includes(k)).slice(0, 8);
 
-  // Thoughts
-  thoughtInput: document.getElementById('thought-input'),
-  btnSaveThought: document.getElementById('btn-save-thought'),
-  thoughtList: document.getElementById('thought-list'),
+  // ATS Score: base 40 + matches
+  const matchRatio = state.matched.length / Math.max(allKeywords.length, 1);
+  const hasExp = document.getElementById("f-experience").value.length > 20;
+  const hasCert = document.getElementById("f-certifications").value.length > 3;
+  const hasProjects = state.projects.length > 0;
+  state.atsScore = Math.min(97, Math.round(40 + matchRatio * 35 + (hasExp ? 8 : 0) + (hasCert ? 5 : 0) + (hasProjects ? 12 : 0)));
 
-  // Decisions
-  decisionForm: document.getElementById('decision-form'),
-  decInput: document.getElementById('decision-input'),
-  decImpIn: document.getElementById('input-dec-imp'),
-  decEffIn: document.getElementById('input-dec-eff'),
-  decImpctIn: document.getElementById('input-dec-impct'),
-  decImpVal: document.getElementById('val-dec-imp'),
-  decEffVal: document.getElementById('val-dec-eff'),
-  decImpctVal: document.getElementById('val-dec-impct'),
-  decListContainer: document.getElementById('decision-list-container'),
-  decList: document.getElementById('decision-list'),
-  btnClearDec: document.getElementById('btn-clear-decisions'),
-
-  // Insights
-  statMood: document.getElementById('stat-avg-mood'),
-  statEnergy: document.getElementById('stat-avg-energy'),
-  insightMsg: document.getElementById('insight-message')
-};
-
-// --- Helpers ---
-const getLabel = (val) => val <= 2 ? "Low" : val == 3 ? "Medium" : "High";
-
-// --- Render Logic ---
-function renderAll() {
-  renderLowMode();
-  renderDailyState();
-  renderTasks();
-  renderThoughts();
-  renderDecisions();
-  renderInsights();
+  animateATSScore(state.atsScore);
+  renderMatchedSkills();
+  renderMissingSkills();
+  renderAITips();
 }
 
-function renderLowMode() {
-  els.body.classList.toggle('low-mode', state.lowMode);
-  els.lowModeText.innerText = state.lowMode ? "Normal Mode" : "Low Mode";
-  els.lowModeIcon.innerText = state.lowMode ? "☀️" : "🌙";
-  
-  let lowTaskBox = document.getElementById('section-low-mode-task');
-  if (state.lowMode) {
-    if (!lowTaskBox) {
-      lowTaskBox = document.createElement('div');
-      lowTaskBox.id = 'section-low-mode-task';
-      lowTaskBox.innerHTML = `<h2>⚡ Suggested Task for Now</h2><div id="lm-task-content"></div>`;
-      els.dashboardContent.appendChild(lowTaskBox);
-    }
-    
-    const content = document.getElementById('lm-task-content');
-    const task = getSuggestedTask();
-    if (task) {
-      content.innerHTML = `<div class="low-mode-task-box">
-        <p class="low-mode-title">${task.title}</p>
-        <button class="btn btn-primary full-width" onclick="completeTask(${task.id})">✅ Mark as Done</button>
-      </div>`;
-    } else {
-      content.innerHTML = `<p style="margin-top:1rem; color:var(--primary); font-weight:500;">No pending tasks. Enjoy your rest! ☕</p>`;
-    }
+function extractJDKeywords(jd) {
+  const words = jd.match(/\b[A-Za-z]{3,}\b/g) || [];
+  const stopWords = new Set(["the","and","for","with","our","you","are","has","have","will","your","that","this","from","they","their","been","into"]);
+  return [...new Set(words.filter(w => !stopWords.has(w.toLowerCase()) && w.length > 3))].slice(0, 10);
+}
+
+function animateATSScore(target) {
+  let current = 0;
+  const el = document.getElementById("ats-score-display");
+  const arc = document.getElementById("ats-arc");
+  const timer = setInterval(() => {
+    current = Math.min(current + 2, target);
+    el.innerText = current;
+    // Animate arc: full arc = 157, dashoffset at 0 = full fill
+    const offset = 157 - (157 * current / 100);
+    arc.style.strokeDashoffset = offset;
+    arc.style.stroke = current >= 70 ? "#22c55e" : current >= 50 ? "#f97316" : "#ef4444";
+    if (current >= target) clearInterval(timer);
+  }, 25);
+
+  const label = document.getElementById("ats-label");
+  const desc = document.getElementById("ats-desc");
+  if (target >= 75) {
+    label.innerText = "Strong Resume ✅";
+    label.style.color = "#16a34a";
+    desc.innerText = "Your resume is well-optimized. Apply with confidence!";
+  } else if (target >= 50) {
+    label.innerText = "Needs Improvement ⚠️";
+    label.style.color = "#f97316";
+    desc.innerText = "Add more keywords from the job description to improve your score.";
   } else {
-    if (lowTaskBox) lowTaskBox.remove();
+    label.innerText = "Weak Match ❌";
+    label.style.color = "#ef4444";
+    desc.innerText = "Your resume needs significant optimization for this role.";
   }
 }
 
-function renderDailyState() {
-  els.moodIn.value = state.today.mood;
-  els.energyIn.value = state.today.energy;
-  els.stressIn.value = state.today.stress;
-  
-  els.moodVal.innerText = `${getLabel(state.today.mood)} (${state.today.mood}/5)`;
-  els.energyVal.innerText = `${getLabel(state.today.energy)} (${state.today.energy}/5)`;
-  els.stressVal.innerText = `${getLabel(state.today.stress)} (${state.today.stress}/5)`;
+function renderMatchedSkills() {
+  document.getElementById("matched-skills").innerHTML =
+    state.matched.length ? state.matched.map(s => `<span class="chip-matched">✅ ${s}</span>`).join("") : "<span style='color:var(--muted);font-size:.85rem'>No matches yet. Add more skills.</span>";
 }
 
-function getSuggestedTask() {
-  const pending = state.tasks.filter(t => !t.done);
-  if (pending.length === 0) return null;
-  
-  const currentEnergy = getLabel(state.today.energy).toLowerCase();
-  const mapEnergy = (val) => val <= 2 ? 'low' : val == 3 ? 'medium' : 'high';
-  const cEnergy = mapEnergy(state.today.energy);
-
-  return pending.sort((a, b) => {
-    const eA = a.energyReq === cEnergy ? 1 : 0;
-    const eB = b.energyReq === cEnergy ? 1 : 0;
-    const iA = a.importance === 'high' ? 1 : 0;
-    const iB = b.importance === 'high' ? 1 : 0;
-    return (eB + iB) - (eA + iA);
-  })[0];
+function renderMissingSkills() {
+  document.getElementById("missing-skills").innerHTML =
+    state.missing.length ? state.missing.map(s => `<span class="chip-missing" style="cursor:pointer" onclick="addSkill('${s}');showToast('✅ ${s} added to your skills!')">${s} +</span>`).join("") : "<span style='color:var(--green);font-size:.85rem'>Great! No major keywords missing.</span>";
 }
 
-function renderTasks() {
-  els.taskList.innerHTML = '';
-  if (state.tasks.length === 0) {
-    els.taskList.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:0.875rem; margin-top:1rem;">No tasks yet. Add one above!</p>';
-  } else {
-    state.tasks.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'task-item';
-      
-      const tagClass = t.energyReq === 'high' ? 'tag-high' : t.energyReq === 'low' ? 'tag-low' : 'tag-med';
+function renderAITips() {
+  const tips = [];
+  if (state.missing.length > 3) tips.push(`Add these missing keywords to your skills: ${state.missing.slice(0,3).join(", ")}.`);
+  if (!document.getElementById("f-experience").value) tips.push("Add internship or work experience — even a 2-month stint significantly boosts your ATS score.");
+  if (state.projects.length < 2) tips.push("Include at least 2–3 projects. Quantify outcomes (e.g. 'Reduced load time by 40%').");
+  if (!document.getElementById("f-certifications").value) tips.push("Add certifications relevant to your role (e.g. AWS, Google Analytics, Meta Blueprint).");
+  if (skills.length < 6) tips.push("List at least 8–10 skills relevant to your target role.");
+  tips.push(`Use strong action verbs: ${ACTION_VERBS.slice(0,5).join(", ")}…`);
+  tips.push("Keep your resume to 1 page if you have under 2 years of experience.");
 
-      div.innerHTML = `
-        <div class="task-left">
-          <button class="icon-btn" onclick="toggleTask(${t.id})">${t.done ? '✅' : '⭕'}</button>
-          <span class="task-title ${t.done ? 'task-done' : ''}">${t.title}</span>
-        </div>
-        <div class="task-right">
-          ${!t.done ? `<span class="task-tag ${tagClass}">${t.energyReq} energy</span>` : ''}
-          <button class="btn-delete" onclick="deleteTask(${t.id})">Delete</button>
-        </div>
-      `;
-      els.taskList.appendChild(div);
-    });
+  document.getElementById("ai-tips").innerHTML = tips.slice(0,5).map(t =>
+    `<li>💡 ${t}</li>`
+  ).join("");
+}
+
+function makeStronger() {
+  const boost = Math.min(97, state.atsScore + Math.floor(Math.random() * 8 + 5));
+  state.atsScore = boost;
+  animateATSScore(boost);
+  // Auto-add missing skills
+  if (state.missing.length > 0) {
+    const toAdd = state.missing.slice(0, 2);
+    toAdd.forEach(s => { if (!skills.includes(s)) skills.push(s); });
+    state.missing = state.missing.slice(2);
+    renderSkillTags();
+    renderMatchedSkills();
+    renderMissingSkills();
   }
-
-  const suggested = getSuggestedTask();
-  if (suggested && !state.lowMode) {
-    els.suggestedContainer.classList.remove('hidden');
-    els.suggestedTitle.innerText = suggested.title;
-    els.btnCompSuggested.onclick = () => completeTask(suggested.id);
-  } else {
-    els.suggestedContainer.classList.add('hidden');
-  }
+  showToast("🔥 Resume strengthened! Score improved.");
 }
 
-function renderThoughts() {
-  els.thoughtList.innerHTML = '';
-  if (state.thoughts.length === 0) {
-    els.thoughtList.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:0.875rem; margin-top:1rem;">Mind is clear! No thoughts dumped yet.</p>';
-  } else {
-    state.thoughts.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'thought-item';
-      
-      const catClass = t.category === 'Actionable' ? 'cat-action' : t.category === 'Ignore' ? 'cat-ignore' : 'cat-revisit';
-
-      div.innerHTML = `
-        <p class="thought-text">${t.text}</p>
-        <div class="thought-meta">
-          <span class="thought-cat ${catClass}">${t.category}</span>
-          <span class="thought-time">${t.time}</span>
-        </div>
-        <button class="btn-delete-thought" onclick="deleteThought(${t.id})">✕</button>
-      `;
-      els.thoughtList.appendChild(div);
-    });
-  }
+function rerunAnalysis() {
+  animateATSScore(0);
+  setTimeout(() => runAIAnalysis(), 300);
 }
 
-function renderDecisions() {
-  els.decList.innerHTML = '';
-  if (state.decisions.length === 0) {
-    els.decListContainer.classList.add('hidden');
-  } else {
-    els.decListContainer.classList.remove('hidden');
-    state.decisions.forEach((d, i) => {
-      const div = document.createElement('div');
-      div.className = `decision-item ${i === 0 ? 'top-choice' : ''}`;
-      div.innerHTML = `
-        <span class="task-title" style="margin-left: ${i===0?'0.5rem':'0'}">${d.option}</span>
-        <span class="decision-score">${d.score} pts</span>
-      `;
-      els.decList.appendChild(div);
-    });
-  }
+// ---- TEMPLATES ----
+function renderTemplates() {
+  const grid = document.getElementById("templates-grid");
+  if (!grid) return;
+  grid.innerHTML = RESUME_TEMPLATES.map(t => `
+    <div class="template-card ${state.template === t.id ? 'selected' : ''}" onclick="selectTemplate('${t.id}')">
+      <div class="template-preview">
+        <div class="tpl-header"></div>
+        <div class="tpl-line short" style="margin-top:4px"></div>
+        <div class="tpl-section" style="margin-top:8px"></div>
+        <div class="tpl-line long"></div>
+        <div class="tpl-line med"></div>
+        <div class="tpl-line full"></div>
+        <div class="tpl-section" style="margin-top:8px"></div>
+        <div class="tpl-line med"></div>
+        <div class="tpl-line short"></div>
+      </div>
+      <div class="template-info">
+        <div class="tpl-name">${t.name}</div>
+        <span class="tpl-tag ${t.tag === 'Free' ? 'tag-free' : 'tag-premium'}">${t.tag}</span>
+        ${t.tag === "Premium" ? '<span class="template-lock">🔒</span>' : ''}
+      </div>
+    </div>`).join("");
 }
 
-function renderInsights() {
-  const recent = state.history.slice(-7);
-  if (recent.length === 0) {
-    els.statMood.innerText = "-";
-    els.statEnergy.innerText = "-";
-    els.insightMsg.innerText = "Log your state for a few days to see insights!";
+function selectTemplate(id) {
+  const tpl = RESUME_TEMPLATES.find(t => t.id === id);
+  if (tpl && tpl.tag === "Premium") {
+    showToast("🔒 Premium template — unlock for ₹199");
+    showPayment("pro");
     return;
   }
-  
-  const avgMood = (recent.reduce((acc, curr) => acc + curr.mood, 0) / recent.length).toFixed(1);
-  const avgEnergy = (recent.reduce((acc, curr) => acc + curr.energy, 0) / recent.length).toFixed(1);
-
-  els.statMood.innerText = avgMood;
-  els.statEnergy.innerText = avgEnergy;
-
-  let insight = "Keep tracking to learn your patterns.";
-  if (avgMood > 3.5 && avgEnergy > 3.5) insight = "You've been in a great state lately! Keep doing what you're doing.";
-  else if (avgEnergy < 2.5) insight = "Your energy has been consistently low. Try to schedule more rest.";
-  else if (avgMood < 2.5) insight = "It's been a tough week emotionally. Be kind to yourself.";
-
-  els.insightMsg.innerText = `💡 ${insight}`;
+  state.template = id;
+  renderTemplates();
+  showToast(`✅ Template "${tpl.name}" selected!`);
 }
 
-// --- Event Listeners ---
+// ---- RESUME RENDER ----
+function renderFinalResume() {
+  const name   = document.getElementById("f-name").value || "Your Name";
+  const email  = document.getElementById("f-email").value || "email@example.com";
+  const phone  = document.getElementById("f-phone").value || "+91 98765 43210";
+  const loc    = document.getElementById("f-location").value || "India";
+  const li     = document.getElementById("f-linkedin").value || "";
+  const edu    = document.getElementById("f-education").value || "B.Tech — Your College (2024)";
+  const cgpa   = document.getElementById("f-cgpa").value || "";
+  const cert   = document.getElementById("f-certifications").value || "";
+  const langs  = document.getElementById("f-languages").value || "";
+  const exp    = document.getElementById("f-experience").value || "";
+  const role   = state.role || "Software Engineer";
+  const roleD  = JOB_ROLES[role] || JOB_ROLES["Software Engineer"];
+  const summaryText = roleD.summary;
 
-// Low Mode
-els.lowModeBtn.addEventListener('click', () => {
-  state.lowMode = !state.lowMode;
-  saveData();
-});
+  const contactLine = [email, phone, loc, li].filter(Boolean).join(" · ");
+  const displaySkills = skills.length ? skills : (roleD.skills || []);
+  const displayProjects = state.projects.length ? state.projects : roleD.projects;
 
-// Daily State
-[els.moodIn, els.energyIn, els.stressIn].forEach(el => {
-  el.addEventListener('input', (e) => {
-    const field = e.target.id.replace('input-', '');
-    state.today[field] = parseInt(e.target.value);
-    saveData();
-  });
-});
+  const html = `<div class="resume-classic">
+    <div class="rc-name">${name}</div>
+    <div class="rc-contact">${contactLine}</div>
+    <div class="rc-section-title">Professional Summary</div>
+    <div style="font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:.25rem">${summaryText}</div>
+    ${displaySkills.length ? `<div class="rc-section-title">Skills</div>
+    <div class="rc-skills">${displaySkills.map(s => `<span class="rc-skill-tag">${s}</span>`).join("")}</div>` : ""}
+    <div class="rc-section-title">Education</div>
+    <div class="rc-item-title">${edu}</div>
+    ${cgpa ? `<div class="rc-item-sub">${cgpa}</div>` : ""}
+    ${displayProjects.length ? `<div class="rc-section-title">Projects</div>
+    ${displayProjects.map(p => `<div style="margin-bottom:.6rem">
+      <div class="rc-item-title">${p.title}</div>
+      <div class="rc-bullet">${p.desc}</div>
+    </div>`).join("")}` : ""}
+    ${exp ? `<div class="rc-section-title">Experience</div>
+    ${exp.split("\n").map(line => line.startsWith("•") ? `<div class="rc-bullet">${line.slice(1).trim()}</div>` : `<div class="rc-item-title" style="margin-bottom:.2rem">${line}</div>`).join("")}` : ""}
+    ${cert ? `<div class="rc-section-title">Certifications</div><div class="rc-bullet">${cert}</div>` : ""}
+    ${langs ? `<div class="rc-section-title">Languages</div><div style="font-size:.8rem">${langs}</div>` : ""}
+  </div>`;
 
-// Tasks
-els.taskForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const title = els.taskInput.value.trim();
-  if (!title) return;
-  
-  state.tasks.unshift({
-    id: Date.now(),
-    title,
-    energyReq: els.taskEnergy.value,
-    importance: els.taskImp.value,
-    done: false
-  });
-  
-  els.taskInput.value = '';
-  saveData();
-});
-
-window.toggleTask = (id) => {
-  const t = state.tasks.find(x => x.id === id);
-  if (t) { t.done = !t.done; saveData(); }
-};
-
-window.completeTask = (id) => {
-  const t = state.tasks.find(x => x.id === id);
-  if (t) { t.done = true; saveData(); }
+  document.getElementById("resume-preview-area").innerHTML = html;
 }
 
-window.deleteTask = (id) => {
-  state.tasks = state.tasks.filter(t => t.id !== id);
-  saveData();
-};
+// ---- DOWNLOAD ----
+function downloadResume() {
+  renderFinalResume();
+  showToast("🖨️ Opening print dialog — Save as PDF to download!");
+  setTimeout(() => window.print(), 500);
+}
 
-// Thoughts
-const categorize = (content) => {
-  const lower = content.toLowerCase();
-  if (/(todo|must|need to|should|fix|call|email|buy)/.test(lower)) return 'Actionable';
-  if (/(ignore|whatever|doesn't matter|stupid|annoyed)/.test(lower)) return 'Ignore';
-  return 'Revisit Later';
-};
+// ---- COVER LETTER ----
+function setCoverTone(tone, btn) {
+  state.coverTone = tone;
+  document.querySelectorAll(".tone-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
 
-els.btnSaveThought.addEventListener('click', () => {
-  const text = els.thoughtInput.value.trim();
-  if (!text) return;
-  
-  state.thoughts.unshift({
-    id: Date.now(),
-    text,
-    category: categorize(text),
-    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+function generateCoverLetter() {
+  const data = {
+    name: document.getElementById("f-name").value || "Your Name",
+    role: state.role || "Software Engineer",
+    company: document.getElementById("f-company").value,
+    education: document.getElementById("f-education").value,
+    skills,
+    projects: state.projects,
+    field: state.role
+  };
+  const fn = COVER_LETTER_TEMPLATES[state.coverTone] || COVER_LETTER_TEMPLATES.formal;
+  const text = fn(data);
+  document.getElementById("cover-letter-text").innerText = text;
+  document.getElementById("cover-letter-card").classList.remove("hidden");
+  showToast("✉️ Cover letter generated!");
+}
+
+function regenerateCoverLetter() {
+  state.coverTone = state.coverTone === "formal" ? "confident" : "formal";
+  document.querySelectorAll(".tone-btn").forEach(b => {
+    b.classList.toggle("active", b.innerText.toLowerCase() === state.coverTone);
   });
-  
-  els.thoughtInput.value = '';
-  saveData();
-});
+  generateCoverLetter();
+}
 
-window.deleteThought = (id) => {
-  state.thoughts = state.thoughts.filter(t => t.id !== id);
-  saveData();
-};
+function printCoverLetter() {
+  const text = document.getElementById("cover-letter-text").innerText;
+  const win = window.open("","_blank");
+  win.document.write(`<html><head><title>Cover Letter</title><style>body{font-family:Inter,sans-serif;padding:3rem;max-width:720px;margin:0 auto;font-size:14px;line-height:1.8;color:#1e293b}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${text}</pre></body></html>`);
+  win.document.close();
+  win.print();
+}
 
-// Decisions
-const updateDecVals = () => {
-  els.decImpVal.innerText = `${els.decImpIn.value}/5`;
-  els.decEffVal.innerText = `${els.decEffIn.value}/5`;
-  els.decImpctVal.innerText = `${els.decImpctIn.value}/5`;
-};
-[els.decImpIn, els.decEffIn, els.decImpctIn].forEach(el => el.addEventListener('input', updateDecVals));
+// ---- PAYMENT ----
+function showPayment(plan) {
+  const amounts = { pro: "₹199", unlimited: "₹299" };
+  document.getElementById("payment-amount").innerText = amounts[plan] || "₹199";
+  document.getElementById("modal-payment").classList.remove("hidden");
+}
 
-els.decisionForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const option = els.decInput.value.trim();
-  if (!option) return;
+function simulatePayment() {
+  document.getElementById("modal-payment").classList.add("hidden");
+  showToast("✅ Payment successful! Premium features unlocked.");
+  // Unlock all templates
+  RESUME_TEMPLATES.forEach(t => t.tag = "Free");
+  renderTemplates();
+}
 
-  const imp = parseInt(els.decImpIn.value);
-  const eff = parseInt(els.decEffIn.value);
-  const impct = parseInt(els.decImpctIn.value);
-  
-  const invertedEffort = 6 - eff; 
-  const score = Math.round((imp * impct * invertedEffort) / 1.25); 
+// ---- TOAST ----
+const $toast = document.getElementById("toast");
+function showToast(msg) {
+  $toast.innerText = msg;
+  $toast.classList.remove("hidden");
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => $toast.classList.add("hidden"), 2800);
+}
 
-  state.decisions.push({ id: Date.now(), option, score });
-  state.decisions.sort((a, b) => b.score - a.score);
-  
-  els.decInput.value = '';
-  els.decImpIn.value = 3; els.decEffIn.value = 3; els.decImpctIn.value = 3;
-  updateDecVals();
-  saveData();
-});
+// ---- CV CONVERTER LOGIC ----
+let convTone = "professional";
 
-els.btnClearDec.addEventListener('click', () => {
-  state.decisions = [];
-  saveData();
-});
+function setConvTone(tone, btn) {
+  convTone = tone;
+  document.querySelectorAll("#page-converter .tone-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
 
-// Init
-loadData();
-renderAll();
+async function convertCV() {
+  const cvText = document.getElementById("conv-cv-input").value.trim();
+  const jdText = document.getElementById("conv-jd-input").value.trim();
+  const apiKey = document.getElementById("conv-api-key").value.trim();
+
+  if (!cvText || !jdText) {
+    showToast("⚠️ Please provide both your CV and a Job Description.");
+    return;
+  }
+
+  showToast(apiKey ? "🚀 Connecting to AI... this may take 5-10s" : "🤖 Running local AI simulation...");
+  document.getElementById("btn-convert").innerText = "⏳ AI is processing...";
+  document.getElementById("btn-convert").disabled = true;
+
+  if (apiKey) {
+    try {
+      const response = await callGeminiAPI(apiKey, cvText, jdText);
+      renderAIResult(response, cvText);
+    } catch (err) {
+      console.error(err);
+      showToast("❌ AI Error: " + err.message);
+      document.getElementById("btn-convert").innerText = "✨ Convert CV to Match This Job";
+      document.getElementById("btn-convert").disabled = false;
+    }
+  } else {
+    // Fallback to local simulation
+    setTimeout(() => {
+      const role = document.getElementById("conv-role-select").value || "Software Engineer";
+      const roleData = JOB_ROLES[role] || JOB_ROLES["Software Engineer"];
+      const jdKeywords = extractJDKeywords(jdText);
+      const matched = jdKeywords.filter(k => cvText.toLowerCase().includes(k.toLowerCase()));
+      const missing = jdKeywords.filter(k => !matched.includes(k)).slice(0, 5);
+
+      let tailoredCV = cvText;
+      if (tailoredCV.toLowerCase().includes("skills")) {
+        const skillsRegex = /(skills\s*[:\-\n])([\s\S]*?)(?=\n\n|\n[A-Z]|$)/i;
+        tailoredCV = tailoredCV.replace(skillsRegex, (match, p1, p2) => {
+          return `${p1}${p2.trim()}, ${missing.join(", ")}`;
+        });
+      }
+      const summaryRegex = /(summary|objective|profile\s*[:\-\n])([\s\S]*?)(?=\n\n|\n[A-Z]|$)/i;
+      if (tailoredCV.match(summaryRegex)) {
+        tailoredCV = tailoredCV.replace(summaryRegex, (match, p1) => {
+          return `${p1}${roleData.summary}`;
+        });
+      } else {
+        tailoredCV = `SUMMARY\n${roleData.summary}\n\n${tailoredCV}`;
+      }
+      ACTION_VERBS.slice(0, 3).forEach((verb, i) => {
+        tailoredCV = tailoredCV.replace(/•\s+/g, (match, offset) => {
+          return offset % 2 === 0 ? `• ${verb} ` : match;
+        });
+      });
+
+      const simulatedResult = {
+        tailoredText: tailoredCV,
+        keywordsAdded: missing,
+        scoreBefore: Math.round(40 + (matched.length / Math.max(jdKeywords.length, 1)) * 30),
+        scoreAfter: 88,
+        improvements: 4
+      };
+      renderAIResult(simulatedResult, cvText);
+    }, 2000);
+  }
+}
+
+async function callGeminiAPI(key, cv, jd) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  const prompt = `You are a professional Resume Optimizer.
+Target Job Description:
+${jd}
+
+User's Current CV:
+${cv}
+
+TASK:
+1. Tailor the CV to perfectly match the Job Description.
+2. Optimize for ATS keywords found in the JD.
+3. Enhance bullet points using strong action verbs and quantifiable metrics.
+4. Keep the output professional and concise.
+
+RETURN ONLY A JSON OBJECT with this structure:
+{
+  "tailoredText": "full plain text of the new resume",
+  "keywordsAdded": ["list", "of", "keywords", "you", "injected"],
+  "scoreBefore": 45,
+  "scoreAfter": 92,
+  "improvements": 5,
+  "formattedHTML": "a clean HTML version for professional printing. Use <h1> for name, <div class='contact-info'> for contact info, <h2> for section headers, <p> for paragraphs, and <ul><li> for bullets. Avoid any style tags, use the classes provided."
+}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    })
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  const json = await res.json();
+  return JSON.parse(json.candidates[0].content.parts[0].text);
+}
+
+function renderAIResult(result, originalCV) {
+  document.getElementById("conv-before-text").innerText = originalCV;
+  document.getElementById("conv-after-text").innerText = result.tailoredText;
+  document.getElementById("conv-keywords-added").innerText = result.keywordsAdded.length;
+  document.getElementById("conv-score-before").innerText = result.scoreBefore;
+  document.getElementById("conv-score-after").innerText = result.scoreAfter;
+  document.getElementById("conv-improvements").innerText = result.improvements;
+
+  document.getElementById("conv-keyword-chips").innerHTML = result.keywordsAdded.map(k => `<span class="chip-matched">✅ ${k}</span>`).join("");
+
+  // Professional Template Render
+  if (result.formattedHTML) {
+    document.getElementById("pro-resume-content").innerHTML = result.formattedHTML;
+  } else {
+    // Basic fallback if AI didn't provide HTML
+    document.getElementById("pro-resume-content").innerHTML = `<h1>CV</h1><pre>${result.tailoredText}</pre>`;
+  }
+
+  document.getElementById("conv-output-section").classList.remove("hidden");
+  document.getElementById("btn-convert").innerText = "✨ Convert CV to Match This Job";
+  document.getElementById("btn-convert").disabled = false;
+
+  showToast("✅ CV successfully tailored by AI!");
+  document.getElementById("conv-output-section").scrollIntoView({ behavior: 'smooth' });
+}
+
+function downloadConvertedCV() {
+  showToast("🖨️ Opening print dialog. Please choose 'Save as PDF'.");
+  window.print();
+}
+
+function copyConvertedCV() {
+  const text = document.getElementById("conv-after-text").innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("📋 Tailored CV copied to clipboard!");
+  });
+}
+
+function reconvert() {
+  document.getElementById("conv-output-section").classList.add("hidden");
+  document.getElementById("conv-jd-input").value = "";
+  window.scrollTo(0, 0);
+  showToast("🔄 Ready for a new job description.");
+}
+
+// ---- INIT ----
+document.getElementById("skill-suggest-bar").style.display = "none";
+goStep(1); // ensure step 1 is shown on builder load

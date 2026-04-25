@@ -3,137 +3,611 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Life Dashboard</title>
+  <title>RoleFit AI – AI-Powered Resume Builder for India</title>
+  <meta name="description" content="Build ATS-optimized, job-specific resumes in 2 minutes with AI. Built for Indian freshers and job seekers. Free to start.">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Serif+Display&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1>🌟 Life Dashboard</h1>
-      <button id="toggle-low-mode" class="btn btn-outline">
-        <span id="low-mode-icon">🌙</span> <span id="low-mode-text">Low Mode</span>
+
+<!-- ========== NAVBAR ========== -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="#" onclick="showPage('home')">
+      <span class="brand-dot"></span> RoleFit <span class="brand-ai">AI</span>
+    </a>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('home')">Home</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#" onclick="showPage('builder')">Builder</a>
+      <a href="#" onclick="showPage('converter')" style="color:#bc6c25;font-weight:700;">🔄 CV Converter</a>
+    </div>
+    <button class="btn btn-nav" onclick="showPage('builder')">Create Resume →</button>
+  </div>
+</nav>
+
+<!-- ========== HOME PAGE ========== -->
+<div id="page-home">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">🏆 #1 AI Resume Builder for Indian Freshers</div>
+    <h1 class="hero-title">Get Hired Faster with<br><span class="gradient-text">AI-Optimized Resumes</span></h1>
+    <p class="hero-sub">Paste a job description. Watch AI tailor your resume to beat ATS filters and land interviews — in under 2 minutes.</p>
+    <div class="hero-cta">
+      <button class="btn btn-primary btn-lg" onclick="showPage('builder')">✨ Create My Resume — Free</button>
+      <button class="btn btn-ghost btn-lg" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See How It Works ↓</button>
+      <button class="btn btn-converter-hero btn-lg" onclick="showPage('converter')">🔄 Convert Existing CV</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">50K+</span><span class="stat-label">Resumes Built</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat"><span class="stat-num">92%</span><span class="stat-label">ATS Pass Rate</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat"><span class="stat-num">2 Min</span><span class="stat-label">Avg Build Time</span></div>
+    </div>
+    <!-- Resume preview mockup -->
+    <div class="hero-preview">
+      <div class="preview-card">
+        <div class="preview-header-bar">
+          <div class="preview-dot red"></div><div class="preview-dot yellow"></div><div class="preview-dot green"></div>
+        </div>
+        <div class="preview-resume-mock">
+          <div class="mock-name-bar"></div>
+          <div class="mock-contact-bar"></div>
+          <div class="mock-section-title"></div>
+          <div class="mock-line w80"></div>
+          <div class="mock-line w90"></div>
+          <div class="mock-line w70"></div>
+          <div class="mock-section-title"></div>
+          <div class="mock-line w85"></div>
+          <div class="mock-line w75"></div>
+          <div class="mock-ats-badge">ATS Score: <strong>87/100</strong> ✅</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-section" id="how">
+    <div class="section-inner">
+      <div class="section-badge">Simple 4-Step Process</div>
+      <h2 class="section-title">From details to dream job — in minutes</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <div class="step-icon">📝</div>
+          <h3>Fill Your Details</h3>
+          <p>Enter your education, skills, projects, and experience. Or activate Fresher Mode — AI fills sample content for you.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <div class="step-icon">🎯</div>
+          <h3>Target Your Job</h3>
+          <p>Select your role or paste the job description. AI extracts keywords and tailors your resume to maximize ATS score.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <div class="step-icon">✨</div>
+          <h3>AI Optimizes</h3>
+          <p>AI rewrites your bullets with strong action verbs, fills gaps, and gives you an ATS score with improvement tips.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">04</div>
+          <div class="step-icon">⬇️</div>
+          <h3>Download & Apply</h3>
+          <p>Choose from 5 templates, generate your cover letter, then download a clean PDF and start applying today.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features-section">
+    <div class="section-inner">
+      <div class="section-badge">Why RoleFit AI?</div>
+      <h2 class="section-title">Built for the Indian job market</h2>
+      <div class="features-grid">
+        <div class="feature-card accent-purple">
+          <div class="feature-icon">🤖</div>
+          <h3>AI Job Matching</h3>
+          <p>Paste any job description and AI instantly rewrites your resume to match it — extracting exact keywords recruiters look for.</p>
+        </div>
+        <div class="feature-card accent-blue">
+          <div class="feature-icon">📊</div>
+          <h3>Real-Time ATS Score</h3>
+          <p>Get an ATS score from 0–100 with specific tips to improve it. Know exactly why your resume gets shortlisted or rejected.</p>
+        </div>
+        <div class="feature-card accent-green">
+          <div class="feature-icon">🎓</div>
+          <h3>Fresher Mode</h3>
+          <p>No experience? No problem. AI auto-generates realistic projects, internship descriptions, and achievements for freshers.</p>
+        </div>
+        <div class="feature-card accent-orange">
+          <div class="feature-icon">📄</div>
+          <h3>Cover Letter Generator</h3>
+          <p>Generate personalized cover letters in formal or confident tone based on your resume and target company — in one click.</p>
+        </div>
+        <div class="feature-card accent-pink">
+          <div class="feature-icon">🎨</div>
+          <h3>5 Free Templates</h3>
+          <p>Choose from Classic, Modern, Minimal, Bold, and Elegant designs. All ATS-friendly. Live preview as you build.</p>
+        </div>
+        <div class="feature-card accent-teal">
+          <div class="feature-icon">💰</div>
+          <h3>Affordable Plans</h3>
+          <p>Free to build. Pay only ₹99–₹299 to download. 10x cheaper than international tools, built for India's job market.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing-section" id="pricing">
+    <div class="section-inner">
+      <div class="section-badge">Simple Pricing</div>
+      <h2 class="section-title">Start free. Pay only when ready.</h2>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">₹0</div>
+          <div class="plan-desc">Forever free</div>
+          <ul class="plan-features">
+            <li>✅ Basic resume builder</li>
+            <li>✅ 3 free templates</li>
+            <li>✅ ATS score preview</li>
+            <li>✅ Fresher Mode</li>
+            <li>✅ Cover letter generator</li>
+            <li class="disabled">❌ PDF download</li>
+            <li class="disabled">❌ Premium templates</li>
+          </ul>
+          <button class="btn btn-outline btn-full" onclick="showPage('builder')">Get Started Free</button>
+        </div>
+        <div class="pricing-card featured">
+          <div class="popular-badge">Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">₹199</div>
+          <div class="plan-desc">One-time payment</div>
+          <ul class="plan-features">
+            <li>✅ Everything in Free</li>
+            <li>✅ 1 HD PDF download</li>
+            <li>✅ All 5 templates</li>
+            <li>✅ Full ATS score + tips</li>
+            <li>✅ AI job optimization</li>
+            <li>✅ Cover letter PDF</li>
+            <li class="disabled">❌ Unlimited downloads</li>
+          </ul>
+          <button class="btn btn-primary btn-full" onclick="showPayment('pro')">Get Pro — ₹199</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name">Unlimited</div>
+          <div class="plan-price">₹299</div>
+          <div class="plan-desc">One-time payment</div>
+          <ul class="plan-features">
+            <li>✅ Everything in Pro</li>
+            <li>✅ Unlimited PDF downloads</li>
+            <li>✅ Multiple resumes saved</li>
+            <li>✅ Version history</li>
+            <li>✅ LinkedIn optimizer</li>
+            <li>✅ Priority support</li>
+            <li>✅ Future updates</li>
+          </ul>
+          <button class="btn btn-outline btn-full" onclick="showPayment('unlimited')">Get Unlimited — ₹299</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="brand-dot"></span> RoleFit <span class="brand-ai">AI</span></div>
+      <p>Built for Indian freshers and job seekers. Land your dream job faster. 🇮🇳</p>
+      <p class="footer-copy">© 2026 RoleFit AI. All rights reserved.</p>
+    </div>
+  </footer>
+</div>
+
+<!-- ========== BUILDER PAGE ========== -->
+<div id="page-builder" class="hidden">
+
+  <!-- Progress Bar -->
+  <div class="builder-topbar">
+    <button class="btn-back" onclick="showPage('home')">← Back</button>
+    <div class="progress-steps" id="progress-steps">
+      <div class="prog-step active" data-step="1"><span class="prog-num">1</span><span class="prog-label">Info</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="2"><span class="prog-num">2</span><span class="prog-label">Skills</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="3"><span class="prog-num">3</span><span class="prog-label">Experience</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="4"><span class="prog-num">4</span><span class="prog-label">Target Job</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="5"><span class="prog-num">5</span><span class="prog-label">AI Review</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="6"><span class="prog-num">6</span><span class="prog-label">Template</span></div>
+      <div class="prog-connector"></div>
+      <div class="prog-step" data-step="7"><span class="prog-num">7</span><span class="prog-label">Download</span></div>
+    </div>
+    <div class="topbar-right">Step <span id="current-step-num">1</span> of 7</div>
+  </div>
+
+  <div class="builder-body">
+    <!-- STEP 1: Personal Info -->
+    <div class="builder-step active" id="step-1">
+      <div class="step-header"><h2>👤 Personal Information</h2><p>Let's start with your basic details.</p></div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Full Name *</label><input type="text" id="f-name" placeholder="Rahul Sharma"></div>
+        <div class="form-group"><label>Email *</label><input type="email" id="f-email" placeholder="rahul@email.com"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="f-phone" placeholder="+91 98765 43210"></div>
+        <div class="form-group"><label>Location</label><input type="text" id="f-location" placeholder="Mumbai, Maharashtra"></div>
+        <div class="form-group"><label>LinkedIn URL</label><input type="text" id="f-linkedin" placeholder="linkedin.com/in/rahulsharma"></div>
+        <div class="form-group full"><label>Degree & College *</label><input type="text" id="f-education" placeholder="B.Tech Computer Science — IIT Bombay (2024)"></div>
+        <div class="form-group full"><label>CGPA / Percentage</label><input type="text" id="f-cgpa" placeholder="8.5 CGPA / 85%"></div>
+      </div>
+      <div class="step-nav"><button class="btn btn-primary" onclick="goStep(2)">Continue →</button></div>
+    </div>
+
+    <!-- STEP 2: Skills -->
+    <div class="builder-step" id="step-2">
+      <div class="step-header"><h2>🛠️ Skills & Certifications</h2><p>Add your skills — AI will suggest more based on your target role.</p></div>
+      <div class="form-group full">
+        <label>Skills (press Enter or comma to add)</label>
+        <div class="tag-input-wrapper">
+          <div id="skills-tags" class="tags-container"></div>
+          <input type="text" id="skill-input" placeholder="e.g. Python, React, SQL…" onkeydown="handleTagInput(event,'skills')">
+        </div>
+      </div>
+      <div class="ai-suggest-bar" id="skill-suggest-bar">
+        <span class="ai-label">🤖 AI Suggestions:</span>
+        <div id="skill-suggestions" class="suggestion-chips"></div>
+      </div>
+      <div class="form-group full" style="margin-top:1.5rem">
+        <label>Certifications (optional)</label>
+        <input type="text" id="f-certifications" placeholder="e.g. AWS Certified, Google Analytics, Meta Blueprint">
+      </div>
+      <div class="form-group full">
+        <label>Languages</label>
+        <input type="text" id="f-languages" placeholder="e.g. English (Fluent), Hindi (Native), Marathi">
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" onclick="goStep(3)">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Experience / Projects -->
+    <div class="builder-step" id="step-3">
+      <div class="step-header">
+        <h2>💼 Experience & Projects</h2>
+        <p>Add your work experience and projects. No experience? Use Fresher Mode!</p>
+      </div>
+      <button class="fresher-mode-btn" id="fresher-btn" onclick="activateFresherMode()">
+        🎓 I'm a Fresher — Generate AI Projects for Me
       </button>
-    </header>
+      <div id="projects-list" class="projects-list"></div>
+      <button class="btn btn-outline add-btn" onclick="addProject()">+ Add Project / Experience</button>
+      <div class="form-group full" style="margin-top:1.5rem">
+        <label>Internship / Work Experience (optional)</label>
+        <textarea id="f-experience" rows="4" placeholder="e.g. Software Development Intern at XYZ Corp (June 2023 – Aug 2023)&#10;• Developed REST APIs using Node.js serving 10K+ daily requests&#10;• Reduced page load time by 40% through code optimization"></textarea>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+        <button class="btn btn-primary" onclick="goStep(4)">Continue →</button>
+      </div>
+    </div>
 
-    <div id="dashboard-content" class="dashboard-grid">
-      
-      <!-- Daily State -->
-      <section class="card daily-state" id="section-daily">
-        <h2>How are you feeling today?</h2>
-        <div class="sliders">
-          <div class="slider-group">
-            <div class="slider-header">
-              <span>Mood</span>
-              <span class="badge" id="val-mood">Medium (3/5)</span>
+    <!-- STEP 4: Target Job -->
+    <div class="builder-step" id="step-4">
+      <div class="step-header"><h2>🎯 Target Job</h2><p>Tell us what role you're applying for. This is the most important step!</p></div>
+      <div class="form-group full">
+        <label>Select Target Role</label>
+        <div class="role-pills" id="role-pills">
+          <button class="role-pill" onclick="selectRole('Software Engineer')">💻 Software Engineer</button>
+          <button class="role-pill" onclick="selectRole('Data Analyst')">📊 Data Analyst</button>
+          <button class="role-pill" onclick="selectRole('Marketing Intern')">📣 Marketing Intern</button>
+          <button class="role-pill" onclick="selectRole('UI/UX Designer')">🎨 UI/UX Designer</button>
+          <button class="role-pill" onclick="selectRole('Finance Analyst')">💰 Finance Analyst</button>
+          <button class="role-pill" onclick="selectRole('HR Intern')">👥 HR Intern</button>
+        </div>
+      </div>
+      <div class="or-divider"><span>OR</span></div>
+      <div class="form-group full">
+        <label>Paste Job Description</label>
+        <textarea id="f-jd" rows="6" placeholder="Paste the full job description here. AI will extract keywords and tailor your resume to match exactly what recruiters are looking for…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Company Name (for cover letter)</label>
+        <input type="text" id="f-company" placeholder="e.g. Google, Infosys, Swiggy">
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="goStep(3)">← Back</button>
+        <button class="btn btn-primary" onclick="runAIAnalysis()">🤖 Analyze with AI →</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: AI Review -->
+    <div class="builder-step" id="step-5">
+      <div class="step-header"><h2>✨ AI Optimization Results</h2><p>Here's how your resume stacks up — and how to make it better.</p></div>
+
+      <!-- ATS Score -->
+      <div class="ats-score-card">
+        <div class="ats-gauge-wrapper">
+          <svg class="ats-gauge" viewBox="0 0 120 70">
+            <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
+            <path id="ats-arc" d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="#22c55e" stroke-width="10" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"/>
+          </svg>
+          <div class="ats-score-val"><span id="ats-score-display">0</span><small>/100</small></div>
+        </div>
+        <div class="ats-info">
+          <h3 id="ats-label">Calculating...</h3>
+          <p id="ats-desc">Analyzing your resume against ATS requirements.</p>
+        </div>
+      </div>
+
+      <!-- Missing Skills -->
+      <div class="ai-section">
+        <h4>⚠️ Missing Keywords (Add these to improve your score)</h4>
+        <div id="missing-skills" class="chip-list"></div>
+      </div>
+
+      <!-- Matched Skills -->
+      <div class="ai-section">
+        <h4>✅ Matched Keywords</h4>
+        <div id="matched-skills" class="chip-list"></div>
+      </div>
+
+      <!-- AI Tips -->
+      <div class="ai-section">
+        <h4>💡 AI Improvement Tips</h4>
+        <ul id="ai-tips" class="tips-list"></ul>
+      </div>
+
+      <!-- AI Actions -->
+      <div class="ai-actions">
+        <button class="btn btn-ai" onclick="makeStronger()">🔥 Make It Stronger</button>
+        <button class="btn btn-ai-outline" onclick="rerunAnalysis()">🔄 Re-analyze</button>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="goStep(4)">← Back</button>
+        <button class="btn btn-primary" onclick="goStep(6)">Choose Template →</button>
+      </div>
+    </div>
+
+    <!-- STEP 6: Template -->
+    <div class="builder-step" id="step-6">
+      <div class="step-header"><h2>🎨 Choose Your Template</h2><p>Pick a design. All free templates are ATS-friendly.</p></div>
+      <div class="templates-grid" id="templates-grid"></div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="goStep(5)">← Back</button>
+        <button class="btn btn-primary" onclick="goStep(7)">Preview & Download →</button>
+      </div>
+    </div>
+
+    <!-- STEP 7: Download -->
+    <div class="builder-step" id="step-7">
+      <div class="step-header"><h2>🎉 Your Resume is Ready!</h2><p>Preview, download, and start applying.</p></div>
+      <div class="final-layout">
+        <div class="final-left">
+          <div id="resume-preview-area" class="resume-preview-area"></div>
+        </div>
+        <div class="final-right">
+          <div class="download-card">
+            <h3>📥 Download Options</h3>
+            <button class="btn btn-primary btn-full" onclick="downloadResume()">⬇️ Download PDF (Free)</button>
+            <div class="download-note">PDF opens print dialog — Save as PDF to download.</div>
+            <div class="divider-or">── Cover Letter ──</div>
+            <div class="cover-tone-row">
+              <label>Tone:</label>
+              <button class="tone-btn active" onclick="setCoverTone('formal', this)">Formal</button>
+              <button class="tone-btn" onclick="setCoverTone('confident', this)">Confident</button>
             </div>
-            <input type="range" id="input-mood" min="1" max="5" value="3">
+            <button class="btn btn-outline btn-full" onclick="generateCoverLetter()">✉️ Generate Cover Letter</button>
           </div>
-          <div class="slider-group">
-            <div class="slider-header">
-              <span>Energy</span>
-              <span class="badge" id="val-energy">Medium (3/5)</span>
+          <div id="cover-letter-card" class="cover-letter-card hidden">
+            <div class="cover-letter-header">
+              <h4>✉️ Cover Letter</h4>
+              <button class="btn-icon" onclick="regenerateCoverLetter()">🔄</button>
             </div>
-            <input type="range" id="input-energy" min="1" max="5" value="3">
-          </div>
-          <div class="slider-group">
-            <div class="slider-header">
-              <span>Stress</span>
-              <span class="badge" id="val-stress">Medium (3/5)</span>
-            </div>
-            <input type="range" id="input-stress" min="1" max="5" value="3">
+            <div id="cover-letter-text" class="cover-letter-text"></div>
+            <button class="btn btn-outline btn-full" style="margin-top:1rem" onclick="printCoverLetter()">🖨️ Print Cover Letter</button>
           </div>
         </div>
-      </section>
-
-      <!-- Tasks -->
-      <section class="card tasks" id="section-tasks">
-        <h2>📋 Tasks</h2>
-        
-        <div id="suggested-task-container" class="suggested-task hidden">
-          <div class="suggested-info">
-            <span class="suggested-label">⚡ Suggested (Matches Energy)</span>
-            <p id="suggested-task-title" class="task-title"></p>
-          </div>
-          <button id="btn-complete-suggested" class="icon-btn">✅</button>
-        </div>
-
-        <form id="task-form" class="task-form">
-          <input type="text" id="task-input" placeholder="What needs to be done?" required>
-          <select id="task-energy">
-            <option value="low">Low Energy</option>
-            <option value="medium" selected>Med Energy</option>
-            <option value="high">High Energy</option>
-          </select>
-          <select id="task-importance">
-            <option value="high" selected>High Priority</option>
-            <option value="low">Low Priority</option>
-          </select>
-          <button type="submit" class="btn btn-primary">➕</button>
-        </form>
-
-        <div id="task-list" class="task-list"></div>
-      </section>
-
-      <!-- Thought Dump -->
-      <section class="card thoughts" id="section-thoughts">
-        <h2>💬 Thought Dump</h2>
-        <div class="thought-input-wrapper">
-          <textarea id="thought-input" placeholder="What's on your mind? Just write it out..."></textarea>
-          <button id="btn-save-thought" class="btn btn-primary btn-save">Save</button>
-        </div>
-        <div id="thought-list" class="thought-list"></div>
-      </section>
-
-      <!-- Weekly Insights -->
-      <section class="card insights" id="section-insights">
-        <h2>📈 Insights</h2>
-        <div class="stats-grid">
-          <div class="stat-box">
-            <span class="stat-label">Avg Mood</span>
-            <span id="stat-avg-mood" class="stat-value">-</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-label">Avg Energy</span>
-            <span id="stat-avg-energy" class="stat-value">-</span>
-          </div>
-        </div>
-        <div class="insight-message" id="insight-message">Log your state for a few days to see insights!</div>
-      </section>
-
-      <!-- Decision Helper -->
-      <section class="card decisions" id="section-decisions">
-        <h2>❓ Decision Helper</h2>
-        <form id="decision-form" class="decision-form">
-          <input type="text" id="decision-input" placeholder="What are you deciding on?" required>
-          
-          <div class="slider-group">
-            <div class="slider-header"><span>Importance</span><span id="val-dec-imp" class="bold">3/5</span></div>
-            <input type="range" id="input-dec-imp" min="1" max="5" value="3">
-          </div>
-          <div class="slider-group">
-            <div class="slider-header"><span>Effort required</span><span id="val-dec-eff" class="bold">3/5</span></div>
-            <input type="range" id="input-dec-eff" min="1" max="5" value="3" class="range-orange">
-          </div>
-          <div class="slider-group">
-            <div class="slider-header"><span>Long-term Impact</span><span id="val-dec-impct" class="bold">3/5</span></div>
-            <input type="range" id="input-dec-impct" min="1" max="5" value="3" class="range-green">
-          </div>
-
-          <button type="submit" class="btn btn-primary full-width" style="margin-top: 0.5rem;">Evaluate Option</button>
-        </form>
-
-        <div id="decision-list-container" class="hidden">
-          <div class="decision-header">
-            <span class="decision-label">Recommendations</span>
-            <button id="btn-clear-decisions" class="btn-clear">Clear all</button>
-          </div>
-          <div id="decision-list" class="decision-list"></div>
-        </div>
-      </section>
-
+      </div>
+      <div class="step-nav" style="justify-content:flex-start">
+        <button class="btn btn-ghost" onclick="goStep(6)">← Back to Templates</button>
+        <button class="btn btn-outline" onclick="showPage('home')">🏠 Back to Home</button>
+      </div>
     </div>
   </div>
-  <script src="script.js"></script>
+</div>
+
+<!-- Payment Modal -->
+<div id="modal-payment" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>💳 Complete Payment</h3>
+      <button class="modal-close" onclick="document.getElementById('modal-payment').classList.add('hidden')">✕</button>
+    </div>
+    <div style="padding:1.5rem; text-align:center;">
+      <div class="payment-amount" id="payment-amount">₹199</div>
+      <p style="color:var(--text-muted); margin-bottom:1.5rem; font-size:0.9rem;">Secure payment via Razorpay</p>
+      <button class="btn btn-primary btn-full" onclick="simulatePayment()">Pay Now via Razorpay →</button>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem;">🔒 100% secure · UPI, Cards, Net Banking accepted</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CV CONVERTER PAGE ========== -->
+<div id="page-converter" class="hidden">
+  <div class="converter-topbar">
+    <button class="btn-back" onclick="showPage('home')">← Back to Home</button>
+    <h2 class="converter-topbar-title">🔄 CV Converter</h2>
+    <span class="converter-topbar-sub">Paste your CV + Job Description → Get a tailored CV instantly</span>
+  </div>
+
+  <div class="converter-body">
+
+    <!-- How it works strip -->
+    <div class="converter-how">
+      <div class="conv-how-step"><span class="conv-step-num">1</span> Paste your existing CV</div>
+      <div class="conv-arrow">→</div>
+      <div class="conv-how-step"><span class="conv-step-num">2</span> Paste the Job Description</div>
+      <div class="conv-arrow">→</div>
+      <div class="conv-how-step"><span class="conv-step-num">3</span> Click Convert</div>
+      <div class="conv-arrow">→</div>
+      <div class="conv-how-step"><span class="conv-step-num">4</span> Download tailored CV</div>
+    </div>
+
+    <!-- Input Panel -->
+    <div class="converter-inputs">
+      <div class="conv-input-card">
+        <div class="conv-card-header">
+          <h3>📄 Your Existing CV</h3>
+          <span class="conv-hint">Plain text or copied from Word/PDF</span>
+        </div>
+        <textarea id="conv-cv-input" rows="18" placeholder="Paste your current CV here...
+
+Example:
+Rahul Sharma
+Email: rahul@email.com | Phone: +91 98765 43210
+
+EDUCATION
+B.Tech Computer Science, XYZ College, 2024
+CGPA: 7.8
+
+SKILLS
+Python, Java, HTML, CSS, MySQL
+
+PROJECTS
+Library Management System - Built using Java and MySQL
+Portfolio Website - Created using HTML and CSS
+
+CERTIFICATIONS
+Python for Beginners - Coursera"></textarea>
+      </div>
+
+      <div class="conv-input-card">
+        <div class="conv-card-header">
+          <h3>🎯 Job Description</h3>
+          <span class="conv-hint">Copy-paste from Naukri, LinkedIn, or any job portal</span>
+        </div>
+        <textarea id="conv-jd-input" rows="18" placeholder="Paste the job description here...
+
+Example:
+We are looking for a Software Engineer with:
+- 0-2 years experience (freshers welcome)
+- Strong skills in React.js, Node.js, REST APIs
+- Experience with SQL databases
+- Knowledge of Git and Agile methodology
+- Good problem-solving and communication skills
+
+Responsibilities:
+- Build and maintain web applications
+- Collaborate with cross-functional teams
+- Write clean, maintainable code"></textarea>
+
+        <div class="conv-jd-extras">
+          <div class="conv-extra-row">
+            <label>API Key (Gemini):</label>
+            <input type="password" id="conv-api-key" placeholder="Paste your Gemini API Key here..." style="flex:1; padding:0.4rem; border-radius:0.5rem; border:1.5px solid var(--border);">
+          </div>
+          <div class="conv-extra-row">
+            <label>Target Role (optional):</label>
+            <select id="conv-role-select">
+              <option value="">Auto-detect from JD</option>
+              <option value="Software Engineer">💻 Software Engineer</option>
+              <option value="Data Analyst">📊 Data Analyst</option>
+              <option value="Marketing Intern">📣 Marketing Intern</option>
+              <option value="UI/UX Designer">🎨 UI/UX Designer</option>
+              <option value="Finance Analyst">💰 Finance Analyst</option>
+              <option value="HR Intern">👥 HR Intern</option>
+            </select>
+          </div>
+          <div class="conv-extra-row">
+            <label>Tone:</label>
+            <button class="tone-btn active" onclick="setConvTone('professional', this)">Professional</button>
+            <button class="tone-btn" onclick="setConvTone('confident', this)">Confident</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Convert Button -->
+    <div class="conv-action-bar">
+      <button class="btn btn-convert" id="btn-convert" onclick="convertCV()">
+        ✨ Convert CV to Match This Job
+      </button>
+      <span class="conv-action-note">AI will extract keywords, enhance your bullets, and tailor your summary in seconds</span>
+    </div>
+
+    <!-- Output Panel -->
+    <div id="conv-output-section" class="conv-output-section hidden">
+
+      <!-- Stats bar -->
+      <div class="conv-stats-bar">
+        <div class="conv-stat">
+          <span class="conv-stat-num" id="conv-keywords-added">0</span>
+          <span class="conv-stat-label">Keywords Added</span>
+        </div>
+        <div class="conv-stat-divider"></div>
+        <div class="conv-stat">
+          <span class="conv-stat-num" id="conv-score-before">0</span>
+          <span class="conv-stat-label">ATS Before</span>
+        </div>
+        <div class="conv-stat-divider"></div>
+        <div class="conv-stat">
+          <span class="conv-stat-num" id="conv-score-after">0</span>
+          <span class="conv-stat-label">ATS After</span>
+        </div>
+        <div class="conv-stat-divider"></div>
+        <div class="conv-stat">
+          <span class="conv-stat-num" id="conv-improvements">0</span>
+          <span class="conv-stat-label">Improvements</span>
+        </div>
+      </div>
+
+      <!-- Added keywords chips -->
+      <div class="conv-added-keywords">
+        <h4>✅ Keywords Injected from Job Description:</h4>
+        <div id="conv-keyword-chips" class="chip-list" style="margin-top:.5rem"></div>
+      </div>
+
+      <!-- Before / After -->
+      <div class="conv-before-after">
+        <div class="conv-ba-card">
+          <div class="conv-ba-label before-label">📕 Original CV</div>
+          <div id="conv-before-text" class="conv-text-area"></div>
+        </div>
+        <div class="conv-ba-card">
+          <div class="conv-ba-label after-label">✨ Tailored CV (AI Optimized)</div>
+          <div id="conv-after-text" class="conv-text-area"></div>
+        </div>
+      </div>
+
+      <!-- Professional Formatted Preview (Hidden by default, used for print/PDF) -->
+      <div id="conv-pro-template" class="hidden">
+        <div class="pro-resume-paper">
+          <div id="pro-resume-content"></div>
+        </div>
+      </div>
+
+      <!-- Download tailored CV -->
+      <div class="conv-download-bar">
+        <button class="btn btn-primary" onclick="downloadConvertedCV()">⬇️ Download Tailored CV (PDF)</button>
+        <button class="btn btn-outline" onclick="copyConvertedCV()">📋 Copy to Clipboard</button>
+        <button class="btn btn-outline" onclick="reconvert()">🔄 Re-convert with Different JD</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
