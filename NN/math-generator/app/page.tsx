@@ -18,6 +18,7 @@ export default function Home() {
   const [prefs, setPrefs] = useState<UserPreferences>({ defaultDifficulty: "Medium", darkMode: false, apiKey: "" });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(getHistory());
     const savedPrefs = getPreferences();
     setPrefs(savedPrefs);
@@ -120,7 +121,7 @@ Structure your response EXACTLY like this:
 
       saveProblem(newProblem);
       setHistory(getHistory());
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       alert("An error occurred during generation. Please check your API key.");
     } finally {

@@ -148,7 +148,7 @@ export function MainPanel({
             </div>
             <h3 className="text-xl font-medium mb-2">Ready to Generate</h3>
             <p className="max-w-md text-center opacity-80">
-              Select a topic and difficulty from the sidebar, then click "Generate Problem" to create a new mathematical challenge.
+              Select a topic and difficulty from the sidebar, then click &quot;Generate Problem&quot; to create a new mathematical challenge.
             </p>
           </div>
         )}

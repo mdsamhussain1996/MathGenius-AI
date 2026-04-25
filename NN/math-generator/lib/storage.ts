@@ -16,7 +16,7 @@ export function getHistory(): ProblemData[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : [];
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -31,7 +31,7 @@ export function getPreferences(): UserPreferences {
   try {
     const data = localStorage.getItem(PREFS_KEY);
     return data ? JSON.parse(data) : { defaultDifficulty: "Medium", darkMode: false, apiKey: "" };
-  } catch (e) {
+  } catch {
     return { defaultDifficulty: "Medium", darkMode: false, apiKey: "" };
   }
 }
