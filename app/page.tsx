@@ -8,127 +8,32 @@ import { getHistory, saveProblem, getPreferences, savePreferences } from "@/lib/
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
-
-export default function Home() {
-  const [topic, setTopic] = useState("");
-  const [subtopic, setSubtopic] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
-  const [apiKey, setApiKey] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [currentResult, setCurrentResult] = useState<string | null>(null);
-  const [history, setHistory] = useState<ProblemData[]>([]);
-  const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
-  const [provider, setProvider] = useState<"google" | "openai">("google");
-  const [prefs, setPrefs] = useState<UserPreferences>({ defaultDifficulty: "Medium", darkMode: false, apiKey: "", preferredModel: "gemini-1.5-flash", provider: "google" });
-
-
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHistory(getHistory());
-    const savedPrefs = getPreferences();
-    setPrefs(savedPrefs);
-    setDifficulty(savedPrefs.defaultDifficulty);
-    if (savedPrefs.apiKey) {
-      setApiKey(savedPrefs.apiKey);
-    }
-    if (savedPrefs.preferredModel) {
-      setSelectedModel(savedPrefs.preferredModel);
-    }
-    if (savedPrefs.provider) {
-      setProvider(savedPrefs.provider);
-    }
-    if (savedPrefs.darkMode) {
-
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-
-  const handleApiKeyChange = (val: string) => {
-    setApiKey(val);
-    const newPrefs = { ...prefs, apiKey: val };
-    setPrefs(newPrefs);
-    savePreferences(newPrefs);
+// ─── Prompt Builder ──────────────────────────────────────────────────────────
+function buildPrompt(topic: string, subtopic: string, difficulty: string): string {
+  const difficultyGuide: Record<string, string> = {
+    Easy:     "Focus on fundamentals, direct application of formulas, and clear computation. Avoid abstract proofs.",
+    Medium:   "Include multi-step reasoning and combination of concepts. Can include basic proofs.",
+    Hard:     "Focus on advanced reasoning, non-obvious theorem applications, and rigorous proofs.",
+    Research: "Create a proof-heavy, open-ended problem typical of postgraduate coursework or introductory research.",
   };
 
-  const handleModelChange = (val: string) => {
-    setSelectedModel(val);
-    const newPrefs = { ...prefs, preferredModel: val };
-    setPrefs(newPrefs);
-    savePreferences(newPrefs);
-  };
-
-  const handleProviderChange = (val: "google" | "openai") => {
-    setProvider(val);
-    // Set sensible default model for new provider
-    const defaultModel = val === "google" ? "gemini-1.5-flash" : "gpt-4o-mini";
-    setSelectedModel(defaultModel);
-    const newPrefs = { ...prefs, provider: val, preferredModel: defaultModel };
-    setPrefs(newPrefs);
-    savePreferences(newPrefs);
-  };
-
-
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !prefs.darkMode;
-    const newPrefs = { ...prefs, darkMode: newDarkMode };
-    setPrefs(newPrefs);
-    savePreferences(newPrefs);
-    if (newDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
-
-  const handleGenerate = async () => {
-    if (!topic || !apiKey) return;
-
-    // PRE-CHECK: Prevent mismatched keys from causing 401/404 errors
-    const isGoogleKey = apiKey.startsWith("AIza");
-    const isOpenAIKey = apiKey.startsWith("sk-");
-
-    if (provider === "google" && !isGoogleKey) {
-      alert("❌ Invalid Key: You are trying to use an OpenAI key for the Gemini (Google) engine. Please switch the provider to OpenAI or use a Gemini key.");
-      return;
-    }
-    if (provider === "openai" && isGoogleKey) {
-      alert("❌ Invalid Key: You are trying to use a Google Gemini key for the OpenAI engine. Please switch the provider to GEMINI or use an OpenAI (sk-...) key.");
-      return;
-    }
-
-    setIsGenerating(true);
-
-    setCurrentResult(null);
-
-    try {
-      const difficultyPromptMap: Record<string, string> = {
-        Easy: "Focus on fundamentals, direct application of formulas or theorems, and clear straightforward computation. Avoid heavy abstract proofs.",
-        Medium: "Include multi-step reasoning, combination of concepts, and slightly more complex algebraic manipulations. Can include basic introductory proofs.",
-        Hard: "Focus on advanced multi-step reasoning, non-obvious applications of theorems, and rigorous proofs. Problems should require synthesizing multiple concepts.",
-        Research: "Create an open-ended or proof-heavy problem typical of advanced postgraduate coursework or introductory research level. It should be highly conceptual and challenging."
-      };
-
-      const diffGuide = difficultyPromptMap[difficulty] || difficultyPromptMap["Medium"];
-
-      const prompt = `You are an expert professor in Applied Mathematics. Generate a high-quality mathematical problem and its detailed, step-by-step solution.
+  return `You are an expert professor in Applied Mathematics. Generate a high-quality mathematical problem and a fully detailed, step-by-step solution.
 
 Topic: ${topic}
 Subtopic (if provided): ${subtopic || "Any relevant subtopic"}
 Difficulty Level: ${difficulty}
 
 Difficulty Guidelines:
-${diffGuide}
+${difficultyGuide[difficulty] || difficultyGuide["Medium"]}
 
 Requirements:
 1. The problem must be academically rigorous and non-trivial.
-2. Provide a fully detailed step-by-step solution with reasoning (why each step is taken).
+2. Provide a fully detailed step-by-step solution with reasoning for each step.
 3. Identify key concepts used.
 4. Output MUST be formatted entirely in clean Markdown.
-5. Use proper LaTeX for all math formatting. Use $...$ for inline equations and $$...$$ for block equations. Do NOT use \\( \\) or \\[ \\].
-6. Use LaTeX align environments (e.g., \\begin{align*} ... \\end{align*}) for multi-line equations inside block equations.
+5. Use LaTeX for all math: $...$ for inline, $$...$$ for block equations.
+   Do NOT use \\( \\) or \\[ \\] notation.
+6. Use align* environments for multi-line equations: \\begin{align*} ... \\end{align*}
 
 Structure your response EXACTLY like this:
 
@@ -142,63 +47,151 @@ Structure your response EXACTLY like this:
 - [Concept 1]
 - [Concept 2]
 `;
+}
 
-      /**
-       * SECURITY & PRODUCTION NOTE: 
-       * In a real production app (Vercel/Node), we should call our backend (/api/generate)
-       * to keep keys and prompts hidden. 
-       * 
-       * For static GitHub Pages, we fallback to client-side generation using the user's key.
-       */
-      let text = "";
+// ─── Client-Side Fallback (GitHub Pages / Static Hosting) ────────────────────
+// KEY FIX: Pass { apiVersion: "v1" } to force the stable v1 endpoint,
+// bypassing the v1beta 404 "model not found" error.
+async function generateClientSide(
+  provider: "google" | "openai",
+  apiKey: string,
+  model: string,
+  prompt: string
+): Promise<string> {
+  if (provider === "google") {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const generativeModel = genAI.getGenerativeModel(
+      { model },
+      { apiVersion: "v1" } // ✅ KEY FIX: Force stable v1 API
+    );
+    const result = await generativeModel.generateContent(prompt);
+    return result.response.text();
+  } else {
+    const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+    const response = await openai.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+    });
+    return response.choices[0].message.content || "";
+  }
+}
 
-      // 1. Attempt to use the backend proxy first (for production environments)
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function Home() {
+  const [topic, setTopic]                     = useState("");
+  const [subtopic, setSubtopic]               = useState("");
+  const [difficulty, setDifficulty]           = useState<Difficulty>("Medium");
+  const [apiKey, setApiKey]                   = useState("");
+  const [isGenerating, setIsGenerating]       = useState(false);
+  const [currentResult, setCurrentResult]     = useState<string | null>(null);
+  const [errorMessage, setErrorMessage]       = useState<string | null>(null);
+  const [history, setHistory]                 = useState<ProblemData[]>([]);
+  const [selectedModel, setSelectedModel]     = useState("gemini-1.5-flash");
+  const [provider, setProvider]               = useState<"google" | "openai">("google");
+  const [prefs, setPrefs]                     = useState<UserPreferences>({
+    defaultDifficulty: "Medium",
+    darkMode: false,
+    apiKey: "",
+    preferredModel: "gemini-1.5-flash",
+    provider: "google",
+  });
+
+  // Load persisted preferences on mount
+  useEffect(() => {
+    setHistory(getHistory());
+    const saved = getPreferences();
+    setPrefs(saved);
+    setDifficulty(saved.defaultDifficulty);
+    if (saved.apiKey)       setApiKey(saved.apiKey);
+    if (saved.preferredModel) setSelectedModel(saved.preferredModel);
+    if (saved.provider)     setProvider(saved.provider as "google" | "openai");
+    if (saved.darkMode)     document.documentElement.classList.add("dark");
+  }, []);
+
+  // ─── Preference Handlers ───────────────────────────────────────────────────
+  const handleApiKeyChange = (val: string) => {
+    setApiKey(val);
+    const updated = { ...prefs, apiKey: val };
+    setPrefs(updated);
+    savePreferences(updated);
+  };
+
+  const handleModelChange = (val: string) => {
+    setSelectedModel(val);
+    const updated = { ...prefs, preferredModel: val };
+    setPrefs(updated);
+    savePreferences(updated);
+  };
+
+  const handleProviderChange = (val: "google" | "openai") => {
+    const defaultModel = val === "google" ? "gemini-1.5-flash" : "gpt-4o-mini";
+    setProvider(val);
+    setSelectedModel(defaultModel);
+    const updated = { ...prefs, provider: val, preferredModel: defaultModel };
+    setPrefs(updated);
+    savePreferences(updated);
+  };
+
+  const toggleDarkMode = () => {
+    const newDark = !prefs.darkMode;
+    const updated = { ...prefs, darkMode: newDark };
+    setPrefs(updated);
+    savePreferences(updated);
+    document.documentElement.classList.toggle("dark", newDark);
+  };
+
+  // ─── Core Generate Handler ─────────────────────────────────────────────────
+  const handleGenerate = async () => {
+    if (!topic.trim() || !apiKey.trim()) return;
+
+    // Guard: Prevent mismatched key/provider before network call
+    if (provider === "google" && !apiKey.startsWith("AIza")) {
+      setErrorMessage("❌ Wrong key type: Gemini keys start with 'AIza...'. Please switch the provider to OpenAI or use a Gemini key from https://aistudio.google.com/app/apikey");
+      return;
+    }
+    if (provider === "openai" && apiKey.startsWith("AIza")) {
+      setErrorMessage("❌ Wrong key type: OpenAI keys start with 'sk-...'. Please switch the provider to GEMINI or use an OpenAI key from https://platform.openai.com/account/api-keys");
+      return;
+    }
+
+    setIsGenerating(true);
+    setCurrentResult(null);
+    setErrorMessage(null);
+
+    const prompt = buildPrompt(topic, subtopic, difficulty);
+    let text = "";
+
+    try {
+      // ── Strategy 1: Backend proxy (production/Vercel – forces v1 API server-side)
       try {
-        const proxyResponse = await fetch("/api/generate", {
+        const res = await fetch("/MathGenius-AI/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            provider, 
-            model: selectedModel, 
-            prompt, 
-            apiKey // Optional: can be omitted if server has its own key
-          }),
+          body: JSON.stringify({ provider, model: selectedModel, prompt, apiKey }),
         });
-
-        if (proxyResponse.ok) {
-          const data = await proxyResponse.json();
-          text = data.text;
+        if (res.ok) {
+          const data = await res.json();
+          text = data.text || "";
+        } else {
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
         }
       } catch (proxyErr) {
-        console.warn("Backend proxy unavailable, falling back to client-side generation.", proxyErr);
+        console.warn("Backend proxy unavailable, using client-side generation.", proxyErr);
       }
 
-      // 2. Fallback to direct client-side call (required for static GitHub Pages)
+      // ── Strategy 2: Client-side with v1 forced (GitHub Pages fallback)
       if (!text) {
-        if (provider === "google") {
-          const genAI = new GoogleGenerativeAI(apiKey);
-          const model = genAI.getGenerativeModel({ model: selectedModel });
-          const result = await model.generateContent(prompt);
-          const response = await result.response;
-          text = response.text();
-        } else {
-          const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-          const response = await openai.chat.completions.create({
-            model: selectedModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.7,
-          });
-          text = response.choices[0].message.content || "";
-        }
+        text = await generateClientSide(provider, apiKey, selectedModel, prompt);
       }
 
-
-      if (!text) throw new Error("No content generated. Please check your API key.");
+      if (!text) throw new Error("No content was returned. Please try again.");
 
       setCurrentResult(text);
-      
-      const newProblem: ProblemData = {
-        id: Math.random().toString(36).substr(2, 9),
+
+      const entry: ProblemData = {
+        id: Math.random().toString(36).substring(2, 9),
         topic,
         subtopic,
         difficulty,
@@ -206,19 +199,17 @@ Structure your response EXACTLY like this:
         solution: text,
         createdAt: Date.now(),
       };
-
-      saveProblem(newProblem);
+      saveProblem(entry);
       setHistory(getHistory());
+
     } catch (err: unknown) {
       console.error("Generation Error:", err);
-      const errorMsg = err instanceof Error ? err.message : "An error occurred during generation.";
-      alert(`⚠️ Generation Failed\n\n${errorMsg}\n\nTroubleshooting:\n1. Verify your API key is valid for ${provider.toUpperCase()}.\n2. Ensure the selected model is available in your region.\n3. Check your internet connection.`);
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setErrorMessage(`⚠️ ${msg}\n\nTroubleshooting:\n• Verify your API key is valid for ${provider.toUpperCase()}.\n• Try a different model in the sidebar.\n• Check your internet connection.`);
     } finally {
       setIsGenerating(false);
     }
   };
-
-
 
   const loadFromHistory = (prob: ProblemData) => {
     setTopic(prob.topic);
@@ -227,6 +218,7 @@ Structure your response EXACTLY like this:
     setCurrentResult(prob.problem);
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar
@@ -243,8 +235,6 @@ Structure your response EXACTLY like this:
         provider={provider}
         setProvider={handleProviderChange}
         onGenerate={handleGenerate}
-
-
         isGenerating={isGenerating}
         history={history}
         onLoadHistory={loadFromHistory}
@@ -262,11 +252,8 @@ Structure your response EXACTLY like this:
           selectedModel={selectedModel}
           provider={provider}
           setProvider={handleProviderChange}
+          errorMessage={errorMessage}
         />
-
-
-
-
       </main>
     </div>
   );

@@ -18,6 +18,7 @@ interface MainPanelProps {
   selectedModel: string;
   provider: "google" | "openai";
   setProvider: (v: "google" | "openai") => void;
+  errorMessage: string | null;
 }
 
 
@@ -36,7 +37,9 @@ export function MainPanel({
   selectedModel,
   provider,
   setProvider,
+  errorMessage,
 }: MainPanelProps) {
+
 
 
 
@@ -189,6 +192,25 @@ export function MainPanel({
             <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
             <p className="text-lg">Generating problem mathematically...</p>
             <p className="text-sm mt-2 opacity-70">Synthesizing concepts, formulating equations, deriving solutions.</p>
+          </div>
+        ) : errorMessage ? (
+          <div className="h-full flex flex-col items-center justify-center px-8">
+            <div className="w-full max-w-xl bg-destructive/10 border border-destructive/30 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-destructive font-black text-sm">!</span>
+                </div>
+                <h3 className="font-bold text-destructive">Generation Failed</h3>
+              </div>
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed font-sans">{errorMessage}</pre>
+              <div className="pt-2 border-t border-destructive/20">
+                <p className="text-[11px] text-muted-foreground">💡 <strong>Quick Fix</strong>: Get a free Gemini key at{" "}
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline text-primary">
+                    aistudio.google.com
+                  </a>
+                </p>
+              </div>
+            </div>
           </div>
         ) : result ? (
           <div 
