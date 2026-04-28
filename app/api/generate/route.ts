@@ -2,106 +2,164 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
-// Ordered fallback models - tries each until one works
-const GOOGLE_FALLBACK_MODELS = [
+// ─── Model Fallback Chains ────────────────────────────────────────────────────
+// Listed in priority order — tries each until one works
+const GOOGLE_MODELS = [
+  "gemini-1.5-flash-latest",   // ✅ Best free-tier option
+  "gemini-1.5-pro-latest",     // ✅ Smarter, same quota tier
   "gemini-1.5-flash",
-  "gemini-1.5-flash-latest",
-  "gemini-2.0-flash",
   "gemini-pro",
 ];
 
-async function generateWithGoogle(apiKey: string, modelName: string, prompt: string): Promise<string> {
-  // KEY FIX: Force stable v1 API endpoint instead of the default v1beta
-  // This resolves the 404 "model not found for v1beta" error
+const OPENAI_MODELS = [
+  "gpt-4o-mini",
+  "gpt-3.5-turbo",
+];
+
+// ─── Quota / Error Classifier ─────────────────────────────────────────────────
+function classifyGoogleError(message: string): { status: number; userMessage: string } {
+  if (message.includes("RESOURCE_EXHAUSTED") || message.toLowerCase().includes("quota")) {
+    return {
+      status: 429,
+      userMessage:
+        "QUOTA_EXCEEDED: Your Google AI free-tier quota is exhausted (limit: 0).\n\n" +
+        "🔧 How to fix:\n" +
+        "1. Go to: https://console.cloud.google.com/billing\n" +
+        "2. Attach a billing account to your project.\n" +
+        "3. Enable the 'Generative Language API' in the API library.\n" +
+        "4. Or wait until your daily quota resets (midnight Pacific time).\n\n" +
+        "Alternatively, switch to OpenAI in the provider toggle and use a free sk-... API key.",
+    };
+  }
+  if (message.includes("401") || message.toLowerCase().includes("api key")) {
+    return {
+      status: 401,
+      userMessage:
+        "INVALID_KEY: Your Google API key is invalid or not activated.\n\n" +
+        "🔧 Get a free key at: https://aistudio.google.com/app/apikey\n" +
+        "Make sure you are using a Google AI Studio key (starts with AIza...), NOT an OpenAI key.",
+    };
+  }
+  if (message.includes("404") || message.toLowerCase().includes("not found")) {
+    return {
+      status: 404,
+      userMessage: `MODEL_NOT_FOUND: The selected model is not available on your account. Trying fallback models automatically.`,
+    };
+  }
+  return { status: 500, userMessage: message };
+}
+
+// ─── Google Generation with Fallback ─────────────────────────────────────────
+async function generateWithGoogle(
+  apiKey: string,
+  preferredModel: string,
+  prompt: string
+): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
+  const modelsToTry = [preferredModel, ...GOOGLE_MODELS.filter((m) => m !== preferredModel)];
 
-  // Try provided model first, then fallback chain
-  const modelsToTry = [modelName, ...GOOGLE_FALLBACK_MODELS.filter(m => m !== modelName)];
+  let lastError: { status: number; userMessage: string } | null = null;
 
-  let lastError: Error | null = null;
-
-  for (const model of modelsToTry) {
+  for (const modelName of modelsToTry) {
     try {
-      console.log(`[GoogleAI] Trying model: ${model}`);
-      const generativeModel = genAI.getGenerativeModel(
-        { model },
-        // Force v1 stable API - this is the key fix for the 404 error
-        { apiVersion: "v1" }
+      console.log(`[Google] Trying model: ${modelName}`);
+      const model = genAI.getGenerativeModel(
+        { model: modelName },
+        { apiVersion: "v1" } // ✅ Force stable v1 endpoint — avoids v1beta 404 errors
       );
-
-      const result = await generativeModel.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
       if (text) {
-        console.log(`[GoogleAI] ✅ Success with model: ${model}`);
+        console.log(`[Google] ✅ Success: ${modelName}`);
         return text;
       }
     } catch (err: any) {
-      console.warn(`[GoogleAI] ❌ Model ${model} failed: ${err.message}`);
-      lastError = err;
-      // Only continue fallback on 404 (model not found), not on 401 (auth error)
-      if (err.message?.includes("401") || err.message?.includes("API key")) {
-        throw new Error(`Authentication failed. Please check your Google API key. (${err.message})`);
+      const classified = classifyGoogleError(err.message || "");
+      console.warn(`[Google] ❌ ${modelName}: ${classified.userMessage}`);
+      lastError = classified;
+
+      // Quota errors won't be fixed by trying another model — surface immediately
+      if (classified.status === 429 || classified.status === 401) {
+        throw new Error(classified.userMessage);
       }
+      // 404 = model not available → continue to next fallback
       continue;
     }
   }
 
-  throw lastError || new Error("All Gemini models failed. Please check your API key and try again.");
+  throw new Error(
+    lastError?.userMessage ||
+      "All Gemini models failed. Please check your API key and billing status."
+  );
 }
 
-async function generateWithOpenAI(apiKey: string, modelName: string, prompt: string): Promise<string> {
+// ─── OpenAI Generation with Fallback ─────────────────────────────────────────
+async function generateWithOpenAI(
+  apiKey: string,
+  preferredModel: string,
+  prompt: string
+): Promise<string> {
   const openai = new OpenAI({ apiKey });
-  
-  const OPENAI_FALLBACK_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"];
-  const modelsToTry = [modelName, ...OPENAI_FALLBACK_MODELS.filter(m => m !== modelName)];
+  const modelsToTry = [preferredModel, ...OPENAI_MODELS.filter((m) => m !== preferredModel)];
 
-  let lastError: Error | null = null;
-
-  for (const model of modelsToTry) {
+  for (const modelName of modelsToTry) {
     try {
-      console.log(`[OpenAI] Trying model: ${model}`);
+      console.log(`[OpenAI] Trying model: ${modelName}`);
       const response = await openai.chat.completions.create({
-        model,
+        model: modelName,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       });
-
       const text = response.choices[0].message.content || "";
       if (text) {
-        console.log(`[OpenAI] ✅ Success with model: ${model}`);
+        console.log(`[OpenAI] ✅ Success: ${modelName}`);
         return text;
       }
     } catch (err: any) {
-      console.warn(`[OpenAI] ❌ Model ${model} failed: ${err.message}`);
-      lastError = err;
+      console.warn(`[OpenAI] ❌ ${modelName}: ${err.message}`);
       if (err.status === 401) {
-        throw new Error(`Authentication failed. Please check your OpenAI API key. (${err.message})`);
+        throw new Error(
+          "INVALID_KEY: Your OpenAI API key is invalid.\n\n" +
+          "🔧 Get a key at: https://platform.openai.com/account/api-keys\n" +
+          "OpenAI keys start with sk-..."
+        );
       }
-      continue;
+      if (err.status === 429) {
+        throw new Error(
+          "QUOTA_EXCEEDED: Your OpenAI quota is exhausted.\n\n" +
+          "🔧 Add billing at: https://platform.openai.com/account/billing"
+        );
+      }
     }
   }
 
-  throw lastError || new Error("All OpenAI models failed. Please check your API key and try again.");
+  throw new Error("All OpenAI models failed. Please check your API key and billing.");
 }
 
+// ─── Route Handler ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
     const { provider, model, prompt, apiKey } = await req.json();
 
+    // 1. Validate prompt
     if (!prompt?.trim()) {
       return NextResponse.json({ error: "Prompt cannot be empty." }, { status: 400 });
     }
 
-    // Use key from request OR fall back to server-side env variable
-    const activeKey = apiKey || (
-      provider === "google" 
-        ? process.env.GOOGLE_API_KEY 
-        : process.env.OPENAI_API_KEY
-    );
+    // 2. Limit prompt size to prevent quota burn
+    if (prompt.length > 4000) {
+      return NextResponse.json(
+        { error: "Prompt too large (max 4000 characters). Please shorten your request." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Resolve API key (request key → env variable fallback)
+    const activeKey =
+      apiKey ||
+      (provider === "google" ? process.env.GOOGLE_API_KEY : process.env.OPENAI_API_KEY);
 
     if (!activeKey) {
       return NextResponse.json(
@@ -110,41 +168,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate key format before calling the API
+    // 4. Validate key format server-side
     if (provider === "google" && !activeKey.startsWith("AIza")) {
       return NextResponse.json(
-        { error: "Invalid API key format. Google Gemini keys start with 'AIza...'. Get yours at https://aistudio.google.com/app/apikey" },
+        {
+          error:
+            "WRONG_KEY_TYPE: You are using an OpenAI key for Google Gemini.\n" +
+            "Google keys start with AIza... — get yours at https://aistudio.google.com/app/apikey",
+        },
         { status: 401 }
       );
     }
-
-    if (provider === "openai" && !activeKey.startsWith("sk-")) {
+    if (provider === "openai" && activeKey.startsWith("AIza")) {
       return NextResponse.json(
-        { error: "Invalid API key format. OpenAI keys start with 'sk-...'. Get yours at https://platform.openai.com/account/api-keys" },
+        {
+          error:
+            "WRONG_KEY_TYPE: You are using a Google key for OpenAI.\n" +
+            "OpenAI keys start with sk-... — get yours at https://platform.openai.com/account/api-keys",
+        },
         { status: 401 }
       );
     }
 
+    // 5. Generate
     let text = "";
-
     if (provider === "google") {
-      text = await generateWithGoogle(activeKey, model || "gemini-1.5-flash", prompt);
+      text = await generateWithGoogle(activeKey, model || "gemini-1.5-flash-latest", prompt);
     } else {
       text = await generateWithOpenAI(activeKey, model || "gpt-4o-mini", prompt);
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[API] Generation completed in ${duration}ms`);
+    console.log(`[API] ✅ Done in ${duration}ms`);
 
     return NextResponse.json({ text, duration });
-
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[API] Error after ${duration}ms:`, error.message);
+    console.error(`[API] ❌ Failed after ${duration}ms:`, error.message);
 
-    return NextResponse.json(
-      { error: error.message || "An unexpected error occurred. Please try again." },
-      { status: error.message?.includes("Authentication") ? 401 : 500 }
-    );
+    const status = error.message?.includes("QUOTA") ? 429 
+      : error.message?.includes("INVALID_KEY") || error.message?.includes("WRONG_KEY") ? 401 
+      : 500;
+
+    return NextResponse.json({ error: error.message }, { status });
   }
 }

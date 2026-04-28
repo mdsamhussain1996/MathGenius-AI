@@ -87,15 +87,16 @@ export default function Home() {
   const [currentResult, setCurrentResult]     = useState<string | null>(null);
   const [errorMessage, setErrorMessage]       = useState<string | null>(null);
   const [history, setHistory]                 = useState<ProblemData[]>([]);
-  const [selectedModel, setSelectedModel]     = useState("gemini-1.5-flash");
+  const [selectedModel, setSelectedModel]     = useState("gemini-1.5-flash-latest");
   const [provider, setProvider]               = useState<"google" | "openai">("google");
   const [prefs, setPrefs]                     = useState<UserPreferences>({
     defaultDifficulty: "Medium",
     darkMode: false,
     apiKey: "",
-    preferredModel: "gemini-1.5-flash",
+    preferredModel: "gemini-1.5-flash-latest",
     provider: "google",
   });
+
 
   // Load persisted preferences on mount
   useEffect(() => {
@@ -125,13 +126,14 @@ export default function Home() {
   };
 
   const handleProviderChange = (val: "google" | "openai") => {
-    const defaultModel = val === "google" ? "gemini-1.5-flash" : "gpt-4o-mini";
+    const defaultModel = val === "google" ? "gemini-1.5-flash-latest" : "gpt-4o-mini";
     setProvider(val);
     setSelectedModel(defaultModel);
     const updated = { ...prefs, provider: val, preferredModel: defaultModel };
     setPrefs(updated);
     savePreferences(updated);
   };
+
 
   const toggleDarkMode = () => {
     const newDark = !prefs.darkMode;
@@ -144,6 +146,13 @@ export default function Home() {
   // ─── Core Generate Handler ─────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!topic.trim() || !apiKey.trim()) return;
+
+    // Guard: Prompt size limit (prevent quota burn)
+    const builtPrompt = buildPrompt(topic, subtopic, difficulty);
+    if (builtPrompt.length > 4000) {
+      setErrorMessage("⚠️ Prompt too large. Please shorten your topic or subtopic.");
+      return;
+    }
 
     // Guard: Prevent mismatched key/provider before network call
     if (provider === "google" && !apiKey.startsWith("AIza")) {
@@ -159,7 +168,7 @@ export default function Home() {
     setCurrentResult(null);
     setErrorMessage(null);
 
-    const prompt = buildPrompt(topic, subtopic, difficulty);
+    const prompt = builtPrompt;
     let text = "";
 
     try {
@@ -181,11 +190,35 @@ export default function Home() {
         console.warn("Backend proxy unavailable, using client-side generation.", proxyErr);
       }
 
-      // ── Strategy 2: Client-side with v1 forced (GitHub Pages fallback)
+      // ── Strategy 2: Client-side fallback with v1 forced (GitHub Pages / static hosting)
       if (!text) {
-        text = await generateClientSide(provider, apiKey, selectedModel, prompt);
-      }
+        // Client-side also uses fallback chain: flash-latest → pro-latest → flash
+        const GOOGLE_FALLBACKS = ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.5-flash"];
+        const modelsToTry = provider === "google"
+          ? [selectedModel, ...GOOGLE_FALLBACKS.filter(m => m !== selectedModel)]
+          : [selectedModel];
 
+        for (const modelName of modelsToTry) {
+          try {
+            text = await generateClientSide(provider, apiKey, modelName, prompt);
+            if (text) break;
+          } catch (modelErr: any) {
+            // Surface quota errors immediately — switching models won't help
+            if (modelErr.message?.includes("RESOURCE_EXHAUSTED") || modelErr.message?.toLowerCase().includes("quota")) {
+              throw new Error(
+                "QUOTA_EXCEEDED: Your free-tier API quota is exhausted (limit: 0).\n\n" +
+                "🔧 To fix:\n" +
+                "1. Visit: https://console.cloud.google.com/billing\n" +
+                "2. Attach billing to your project.\n" +
+                "3. Enable 'Generative Language API'.\n" +
+                "4. Or wait until quota resets (midnight Pacific Time).\n\n" +
+                "💡 Alternatively, switch to OpenAI using the provider toggle."
+              );
+            }
+            console.warn(`[Client] Model ${modelName} failed:`, modelErr.message);
+          }
+        }
+      }
       if (!text) throw new Error("No content was returned. Please try again.");
 
       setCurrentResult(text);

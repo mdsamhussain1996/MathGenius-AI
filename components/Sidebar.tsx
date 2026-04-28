@@ -165,9 +165,9 @@ export function Sidebar({
             >
               {provider === "google" ? (
                 <>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash ✅ Recommended</option>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash ✅ Latest</option>
-                  <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash Latest</option>
+                  <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash Latest ✅ Recommended</option>
+                  <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro Latest ✅ Smarter</option>
+                  <option value="gemini-2.0-flash">Gemini 2.0 Flash (Experimental)</option>
                   <option value="gemini-pro">Gemini 1.0 Pro (Legacy)</option>
                 </>
               ) : (
