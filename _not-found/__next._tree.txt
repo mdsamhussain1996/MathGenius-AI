@@ -1,2 +1,2 @@
-:HL["/MathGenius-AI/_next/static/chunks/08hux3pd8mdnc.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"X-BPVGrOfQuiuu_3XK4qN"}
+:HL["/MathGenius-AI/_next/static/chunks/11g-mii~0-rek.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"TTwOnORim3WC51ARdtmLB"}
