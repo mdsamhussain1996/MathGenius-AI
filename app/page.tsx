@@ -128,6 +128,11 @@ Structure your response EXACTLY like this:
 - [Concept 2]
 `;
 
+      /**
+       * SECURITY NOTE: 
+       * For production apps deployed on Vercel/Node, calls should be made to our 
+       * backend (/api/generate) to keep keys and system prompts hidden.
+       */
       let text = "";
 
 
@@ -147,8 +152,9 @@ Structure your response EXACTLY like this:
         text = response.choices[0].message.content || "";
       }
 
-      setCurrentResult(text);
+      if (!text) throw new Error("No content generated. Please check your API key.");
 
+      setCurrentResult(text);
       
       const newProblem: ProblemData = {
         id: Math.random().toString(36).substr(2, 9),
@@ -163,13 +169,14 @@ Structure your response EXACTLY like this:
       saveProblem(newProblem);
       setHistory(getHistory());
     } catch (err: unknown) {
-      console.error(err);
+      console.error("Generation Error:", err);
       const errorMsg = err instanceof Error ? err.message : "An error occurred during generation.";
-      alert(`${errorMsg}\n\nPlease check your API key and connection.`);
+      alert(`⚠️ Generation Failed\n\n${errorMsg}\n\nTroubleshooting:\n1. Verify your API key is valid for ${provider.toUpperCase()}.\n2. Ensure the selected model is available in your region.\n3. Check your internet connection.`);
     } finally {
       setIsGenerating(false);
     }
   };
+
 
 
   const loadFromHistory = (prob: ProblemData) => {
