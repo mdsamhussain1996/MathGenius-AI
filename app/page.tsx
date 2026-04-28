@@ -85,7 +85,22 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!topic || !apiKey) return;
+
+    // PRE-CHECK: Prevent mismatched keys from causing 401/404 errors
+    const isGoogleKey = apiKey.startsWith("AIza");
+    const isOpenAIKey = apiKey.startsWith("sk-");
+
+    if (provider === "google" && !isGoogleKey) {
+      alert("❌ Invalid Key: You are trying to use an OpenAI key for the Gemini (Google) engine. Please switch the provider to OpenAI or use a Gemini key.");
+      return;
+    }
+    if (provider === "openai" && isGoogleKey) {
+      alert("❌ Invalid Key: You are trying to use a Google Gemini key for the OpenAI engine. Please switch the provider to GEMINI or use an OpenAI (sk-...) key.");
+      return;
+    }
+
     setIsGenerating(true);
+
     setCurrentResult(null);
 
     try {

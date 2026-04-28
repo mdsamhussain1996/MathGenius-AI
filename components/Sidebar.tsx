@@ -184,12 +184,24 @@ export function Sidebar({
 
         <button
           onClick={onGenerate}
-          disabled={!topic || !apiKey || isGenerating}
+          disabled={
+            !topic || 
+            !apiKey || 
+            isGenerating || 
+            (provider === "google" && !apiKey.startsWith("AIza")) || 
+            (provider === "openai" && apiKey.startsWith("AIza"))
+          }
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-2.5 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isGenerating && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isGenerating ? "Generating..." : "Generate Problem"}
+          {isGenerating ? "Generating..." : (
+            apiKey && (
+              (provider === "google" && !apiKey.startsWith("AIza")) ||
+              (provider === "openai" && apiKey.startsWith("AIza"))
+            ) ? "Mismatched Key & Provider" : "Generate Problem"
+          )}
         </button>
+
 
         <div className="pt-6 border-t">
           <div className="flex items-center justify-between mb-4">
