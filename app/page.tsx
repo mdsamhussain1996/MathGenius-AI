@@ -144,28 +144,54 @@ Structure your response EXACTLY like this:
 `;
 
       /**
-       * SECURITY NOTE: 
-       * For production apps deployed on Vercel/Node, calls should be made to our 
-       * backend (/api/generate) to keep keys and system prompts hidden.
+       * SECURITY & PRODUCTION NOTE: 
+       * In a real production app (Vercel/Node), we should call our backend (/api/generate)
+       * to keep keys and prompts hidden. 
+       * 
+       * For static GitHub Pages, we fallback to client-side generation using the user's key.
        */
       let text = "";
 
-
-      if (provider === "google") {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: selectedModel });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-      } else {
-        const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-        const response = await openai.chat.completions.create({
-          model: selectedModel,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
+      // 1. Attempt to use the backend proxy first (for production environments)
+      try {
+        const proxyResponse = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            provider, 
+            model: selectedModel, 
+            prompt, 
+            apiKey // Optional: can be omitted if server has its own key
+          }),
         });
-        text = response.choices[0].message.content || "";
+
+        if (proxyResponse.ok) {
+          const data = await proxyResponse.json();
+          text = data.text;
+        }
+      } catch (proxyErr) {
+        console.warn("Backend proxy unavailable, falling back to client-side generation.", proxyErr);
       }
+
+      // 2. Fallback to direct client-side call (required for static GitHub Pages)
+      if (!text) {
+        if (provider === "google") {
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const model = genAI.getGenerativeModel({ model: selectedModel });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+        } else {
+          const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+          const response = await openai.chat.completions.create({
+            model: selectedModel,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+          });
+          text = response.choices[0].message.content || "";
+        }
+      }
+
 
       if (!text) throw new Error("No content generated. Please check your API key.");
 
