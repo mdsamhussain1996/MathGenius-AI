@@ -13,6 +13,10 @@ interface SidebarProps {
   setDifficulty: (v: Difficulty) => void;
   apiKey: string;
   setApiKey: (v: string) => void;
+  selectedModel: string;
+  setSelectedModel: (v: string) => void;
+  provider: "google" | "openai";
+  setProvider: (v: "google" | "openai") => void;
   onGenerate: () => void;
   isGenerating: boolean;
   history: ProblemData[];
@@ -28,6 +32,10 @@ export function Sidebar({
   setDifficulty,
   apiKey,
   setApiKey,
+  selectedModel,
+  setSelectedModel,
+  provider,
+  setProvider,
   onGenerate,
   isGenerating,
   history,
@@ -56,16 +64,54 @@ export function Sidebar({
             <Key className="w-4 h-4" /> API Configuration
           </h2>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Gemini API Key</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Provider</label>
+              <div className="flex bg-muted p-0.5 rounded-lg border">
+                <button
+                  onClick={() => setProvider("google")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                    provider === "google" ? "bg-background shadow-sm text-primary" : "text-muted-foreground opacity-50"
+                  }`}
+                >
+                  GEMINI
+                </button>
+                <button
+                  onClick={() => setProvider("openai")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                    provider === "openai" ? "bg-background shadow-sm text-primary" : "text-muted-foreground opacity-50"
+                  }`}
+                >
+                  OPENAI
+                </button>
+              </div>
+            </div>
+            <label className="text-sm font-medium">{provider === "google" ? "Gemini API Key" : "OpenAI API Key"}</label>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIzaSy..."
-              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder={provider === "google" ? "AIzaSy..." : "sk-..."}
+              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
+                apiKey && (
+                  (provider === "google" && !apiKey.startsWith("AIza")) ||
+                  (provider === "openai" && apiKey.startsWith("AIza"))
+                ) ? "border-destructive ring-destructive" : ""
+              }`}
             />
-            <p className="text-xs text-muted-foreground">Stored locally. Required for generation.</p>
+            {apiKey && provider === "openai" && apiKey.startsWith("AIza") && (
+              <p className="text-[10px] text-destructive font-bold mt-1 animate-pulse">
+                ⚠️ You are using a Google key for OpenAI. Please use an sk-... key.
+              </p>
+            )}
+            {apiKey && provider === "google" && apiKey.startsWith("sk-") && (
+              <p className="text-[10px] text-destructive font-bold mt-1 animate-pulse">
+                ⚠️ You are using an OpenAI key for Google. Please use an AIza... key.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">Stored locally. Required for generation.</p>
+
           </div>
+
         </div>
 
         <div className="space-y-4 pt-4 border-t">
@@ -109,6 +155,31 @@ export function Sidebar({
               ))}
             </select>
           </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium italic opacity-70">AI Model (Advanced)</label>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            >
+              {provider === "google" ? (
+                <>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Smarter)</option>
+                  <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                  <option value="gemini-pro">Gemini 1.0 Pro (Legacy)</option>
+                </>
+              ) : (
+                <>
+                  <option value="gpt-4o-mini">GPT-4o Mini (Fast/Cheap)</option>
+                  <option value="gpt-4o">GPT-4o (Most Capable)</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</option>
+                </>
+              )}
+            </select>
+          </div>
+
         </div>
 
         <button

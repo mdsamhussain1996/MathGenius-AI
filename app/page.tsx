@@ -5,7 +5,9 @@ import { Sidebar } from "@/components/Sidebar";
 import { MainPanel } from "@/components/MainPanel";
 import { ProblemData, Difficulty, UserPreferences } from "@/lib/types";
 import { getHistory, saveProblem, getPreferences, savePreferences } from "@/lib/storage";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
+
 
 export default function Home() {
   const [topic, setTopic] = useState("");
@@ -15,7 +17,11 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentResult, setCurrentResult] = useState<string | null>(null);
   const [history, setHistory] = useState<ProblemData[]>([]);
-  const [prefs, setPrefs] = useState<UserPreferences>({ defaultDifficulty: "Medium", darkMode: false, apiKey: "" });
+  const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
+  const [provider, setProvider] = useState<"google" | "openai">("google");
+  const [prefs, setPrefs] = useState<UserPreferences>({ defaultDifficulty: "Medium", darkMode: false, apiKey: "", preferredModel: "gemini-1.5-flash", provider: "google" });
+
+
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -26,10 +32,18 @@ export default function Home() {
     if (savedPrefs.apiKey) {
       setApiKey(savedPrefs.apiKey);
     }
+    if (savedPrefs.preferredModel) {
+      setSelectedModel(savedPrefs.preferredModel);
+    }
+    if (savedPrefs.provider) {
+      setProvider(savedPrefs.provider);
+    }
     if (savedPrefs.darkMode) {
+
       document.documentElement.classList.add("dark");
     }
   }, []);
+
 
   const handleApiKeyChange = (val: string) => {
     setApiKey(val);
@@ -37,6 +51,25 @@ export default function Home() {
     setPrefs(newPrefs);
     savePreferences(newPrefs);
   };
+
+  const handleModelChange = (val: string) => {
+    setSelectedModel(val);
+    const newPrefs = { ...prefs, preferredModel: val };
+    setPrefs(newPrefs);
+    savePreferences(newPrefs);
+  };
+
+  const handleProviderChange = (val: "google" | "openai") => {
+    setProvider(val);
+    // Set sensible default model for new provider
+    const defaultModel = val === "google" ? "gemini-1.5-flash" : "gpt-4o-mini";
+    setSelectedModel(defaultModel);
+    const newPrefs = { ...prefs, provider: val, preferredModel: defaultModel };
+    setPrefs(newPrefs);
+    savePreferences(newPrefs);
+  };
+
+
 
   const toggleDarkMode = () => {
     const newDarkMode = !prefs.darkMode;
@@ -56,8 +89,6 @@ export default function Home() {
     setCurrentResult(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      
       const difficultyPromptMap: Record<string, string> = {
         Easy: "Focus on fundamentals, direct application of formulas or theorems, and clear straightforward computation. Avoid heavy abstract proofs.",
         Medium: "Include multi-step reasoning, combination of concepts, and slightly more complex algebraic manipulations. Can include basic introductory proofs.",
@@ -97,17 +128,27 @@ Structure your response EXACTLY like this:
 - [Concept 2]
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-pro",
-        contents: prompt,
-        config: {
-          temperature: 0.7,
-        }
-      });
+      let text = "";
 
-      const text = response.text || "";
+
+      if (provider === "google") {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: selectedModel });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        text = response.text();
+      } else {
+        const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+        const response = await openai.chat.completions.create({
+          model: selectedModel,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+        });
+        text = response.choices[0].message.content || "";
+      }
 
       setCurrentResult(text);
+
       
       const newProblem: ProblemData = {
         id: Math.random().toString(36).substr(2, 9),
@@ -126,10 +167,10 @@ Structure your response EXACTLY like this:
       const errorMsg = err instanceof Error ? err.message : "An error occurred during generation.";
       alert(`${errorMsg}\n\nPlease check your API key and connection.`);
     } finally {
-
       setIsGenerating(false);
     }
   };
+
 
   const loadFromHistory = (prob: ProblemData) => {
     setTopic(prob.topic);
@@ -149,7 +190,13 @@ Structure your response EXACTLY like this:
         setDifficulty={setDifficulty}
         apiKey={apiKey}
         setApiKey={handleApiKeyChange}
+        selectedModel={selectedModel}
+        setSelectedModel={handleModelChange}
+        provider={provider}
+        setProvider={handleProviderChange}
         onGenerate={handleGenerate}
+
+
         isGenerating={isGenerating}
         history={history}
         onLoadHistory={loadFromHistory}
@@ -162,7 +209,16 @@ Structure your response EXACTLY like this:
           toggleDarkMode={toggleDarkMode}
           topic={topic}
           difficulty={difficulty}
+          apiKey={apiKey}
+          setApiKey={handleApiKeyChange}
+          selectedModel={selectedModel}
+          provider={provider}
+          setProvider={handleProviderChange}
         />
+
+
+
+
       </main>
     </div>
   );

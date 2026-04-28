@@ -14,4 +14,8 @@ export interface UserPreferences {
   defaultDifficulty: Difficulty;
   darkMode: boolean;
   apiKey?: string;
+  preferredModel?: string;
+  provider?: "google" | "openai";
 }
+
+

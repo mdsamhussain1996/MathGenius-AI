@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { Moon, Sun, Download, FileText, FileDown, Loader2, Copy, Check, Printer, Sparkles } from "lucide-react";
+import { Moon, Sun, Download, FileText, FileDown, Loader2, Copy, Check, Printer, Sparkles, Key } from "lucide-react";
+
 
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -12,7 +13,16 @@ interface MainPanelProps {
   toggleDarkMode: () => void;
   topic: string;
   difficulty: string;
+  apiKey: string;
+  setApiKey: (v: string) => void;
+  selectedModel: string;
+  provider: "google" | "openai";
+  setProvider: (v: "google" | "openai") => void;
 }
+
+
+
+
 
 export function MainPanel({
   result,
@@ -21,7 +31,16 @@ export function MainPanel({
   toggleDarkMode,
   topic,
   difficulty,
+  apiKey,
+  setApiKey,
+  selectedModel,
+  provider,
+  setProvider,
 }: MainPanelProps) {
+
+
+
+
   const [showSolution, setShowSolution] = useState(true);
   const [copied, setCopied] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -96,6 +115,12 @@ export function MainPanel({
       <header className="flex items-center justify-between p-4 border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Workspace</h2>
+          <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{provider === "google" ? "GEMINI" : "OPENAI"}: {selectedModel}</span>
+          </div>
+
+
           {result && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground border-l pl-4">
@@ -172,6 +197,86 @@ export function MainPanel({
           >
             <MarkdownRenderer content={displayContent} />
           </div>
+        ) : !apiKey ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="w-24 h-24 mb-8 rounded-3xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/5">
+              <Key className="w-10 h-10 text-primary" />
+            </div>
+            <h3 className="text-3xl font-black mb-3 text-foreground tracking-tight text-center">Welcome to MathGenius AI</h3>
+            <p className="max-w-md text-center opacity-70 mb-10 text-lg leading-relaxed">
+              To begin generating expert-level mathematics problems, please enter your Gemini API Key.
+            </p>
+            
+            <div className="w-full max-w-md p-8 glass rounded-3xl border shadow-2xl space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold uppercase tracking-widest opacity-60">Provider</label>
+                  <div className="flex bg-muted p-0.5 rounded-lg border">
+                    <button
+                      onClick={() => setProvider("google")}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                        provider === "google" ? "bg-background shadow-sm text-primary" : "text-muted-foreground opacity-50"
+                      }`}
+                    >
+                      GEMINI
+                    </button>
+                    <button
+                      onClick={() => setProvider("openai")}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                        provider === "openai" ? "bg-background shadow-sm text-primary" : "text-muted-foreground opacity-50"
+                      }`}
+                    >
+                      OPENAI
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest opacity-60">
+                    {provider === "google" ? "Gemini API Key" : "OpenAI API Key"}
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder={provider === "google" ? "AIzaSy..." : "sk-..."}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all shadow-inner ${
+                        apiKey && (
+                          (provider === "google" && !apiKey.startsWith("AIza")) ||
+                          (provider === "openai" && apiKey.startsWith("AIza"))
+                        ) ? "border-destructive ring-destructive" : ""
+                      }`}
+                    />
+                  </div>
+                  {apiKey && provider === "openai" && apiKey.startsWith("AIza") && (
+                    <p className="text-[10px] text-destructive font-bold mt-1">
+                      ⚠️ This looks like a Google key. OpenAI keys start with &quot;sk-&quot;.
+                    </p>
+                  )}
+                  {apiKey && provider === "google" && apiKey.startsWith("sk-") && (
+                    <p className="text-[10px] text-destructive font-bold mt-1">
+                      ⚠️ This looks like an OpenAI key. Gemini keys start with &quot;AIza...&quot;.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground italic mt-2">
+                    Keys are stored safely in your browser&apos;s local storage.
+                  </p>
+                </div>
+              </div>
+              
+              <a 
+                href={provider === "google" ? "https://aistudio.google.com/app/apikey" : "https://platform.openai.com/account/api-keys"} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              >
+                Get a free {provider === "google" ? "Gemini" : "OpenAI"} Key <Sparkles className="w-4 h-4" />
+              </a>
+            </div>
+
+          </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in duration-500">
             <div className="w-24 h-24 mb-8 rounded-3xl bg-primary/10 flex items-center justify-center rotate-3 hover:rotate-0 transition-transform duration-500 shadow-inner">
@@ -192,6 +297,7 @@ export function MainPanel({
             </div>
           </div>
         )}
+
 
       </div>
     </div>
